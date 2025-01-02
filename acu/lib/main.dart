@@ -1,4 +1,5 @@
 import 'package:acu/screens/login_page.dart';
+import 'package:acu/screens/signup_page.dart';
 import 'package:acu/screens/splas.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -14,7 +15,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      home: OnboardingScreen(),
+      home: SignupPage(),
     );
   }
 }

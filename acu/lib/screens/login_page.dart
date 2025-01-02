@@ -1,4 +1,7 @@
+import 'package:acu/screens/pw_reset.dart';
+import 'package:acu/screens/signup_page.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -76,7 +79,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
               SizedBox(height: 20),
 
-              // Remember Me Toggle using iPhone Style Switch
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -91,8 +93,8 @@ class _LoginPageState extends State<LoginPage> {
                               _rememberMe = value;
                             });
                           },
-                          activeColor:
-                              Colors.orange, // Red color for active state
+                          activeColor: Colors.white,
+                          activeTrackColor: Colors.orange,
                         ),
                       ),
                       Text(
@@ -104,6 +106,7 @@ class _LoginPageState extends State<LoginPage> {
                   TextButton(
                     onPressed: () {
                       // Handle forgot password logic
+                      Get.to(() => ResetPwScreen());
                     },
                     child: Text(
                       'Forgot Password?',
@@ -153,9 +156,10 @@ class _LoginPageState extends State<LoginPage> {
                       onPressed: () {
                         // Google login logic
                       },
-                      icon: Icon(
-                        Icons.mail_lock,
-                        color: Colors.black,
+                      icon: Image.asset(
+                        'lib/assets/download.jpeg',
+                        width: 24,
+                        height: 24,
                       ),
                       label: Text(
                         'Login with Google',
@@ -178,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
                       },
                       icon: Icon(
                         Icons.facebook,
-                        color: Colors.black,
+                        color: const Color.fromARGB(255, 47, 78, 104),
                       ),
                       label: Text(
                         'Login with Facebook',
@@ -197,10 +201,11 @@ class _LoginPageState extends State<LoginPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Don't have an account? "),
+                  Text("Don't have an account?"),
                   TextButton(
                     onPressed: () {
                       // Navigate to sign-up page
+                      Get.to(() => SignupPage());
                     },
                     child: Text(
                       'Sign Up',

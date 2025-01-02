@@ -1,5 +1,6 @@
 import 'package:acu/screens/components/onboarding_controller.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
@@ -20,15 +21,18 @@ class OnboardingScreen extends StatelessWidget {
               OnboardingPage(
                 title: 'Choose Products',
                 subtitle: 'Lorem ipsum dolor sit amet.',
+                image: 'lib/assets/a1.svg',
               ),
               OnboardingPage(
                 title: 'Make Payment',
                 subtitle:
                     'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+                image: 'lib/assets/a2.svg',
               ),
               OnboardingPage(
                 title: 'Get Your Order',
                 subtitle: 'Finalize your choices here.',
+                image: 'lib/assets/a3.svg',
               ),
             ],
           ),
@@ -102,7 +106,7 @@ class OnboardingDotNavigation extends StatelessWidget {
           onDotClicked: controller.dot,
           count: 3,
           effect: ExpandingDotsEffect(
-            activeDotColor: Colors.red,
+            activeDotColor: Colors.black,
             dotHeight: 6,
           ),
         ),
@@ -114,21 +118,29 @@ class OnboardingDotNavigation extends StatelessWidget {
 class OnboardingPage extends StatelessWidget {
   final String title;
   final String subtitle;
+  final String image;
 
   const OnboardingPage({
     super.key,
     required this.title,
     required this.subtitle,
+    required this.image,
   });
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          SvgPicture.asset(
+            image,
+            height: size.height * 0.35,
+            width: size.width * 0.8,
+          ),
           Text(
             title,
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
