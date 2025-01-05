@@ -1,3 +1,4 @@
+import 'package:acu/screens/home.dart';
 import 'package:acu/screens/pw_reset.dart';
 import 'package:acu/screens/signup_page.dart';
 import 'package:flutter/material.dart';
@@ -121,6 +122,7 @@ class _LoginPageState extends State<LoginPage> {
               ElevatedButton(
                 onPressed: () {
                   // Handle sign-in logic
+                  Get.to(() => HomeScreen());
                 },
                 child: Text(
                   'Sign In',
