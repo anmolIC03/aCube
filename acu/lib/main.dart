@@ -1,3 +1,4 @@
+import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/drawer_screen.dart';
 import 'package:acu/screens/components/hidden_drawer.dart';
 import 'package:acu/screens/home.dart';
@@ -21,6 +22,7 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
+    Get.put(CartController());
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       home: HiddenDrawer(),

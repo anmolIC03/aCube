@@ -1,4 +1,7 @@
 import 'package:acu/screens/cart_page.dart';
+import 'package:acu/screens/components/cart_components/cart_controller.dart';
+import 'package:acu/screens/components/cart_components/cart_item.dart';
+import 'package:acu/screens/components/cart_components/product_components/prodList.dart';
 import 'package:acu/screens/components/category_card.dart';
 import 'package:acu/screens/components/category_list.dart';
 import 'package:flutter/material.dart';
@@ -141,14 +144,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: SizedBox(
-                    height: 260,
+                    height: 340,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: 4,
+                      itemCount: productList.length,
                       itemBuilder: (context, index) {
+                        final product = productList[index];
                         return Padding(
                           padding: const EdgeInsets.only(right: 22.0),
-                          child: _buildProductCard(),
+                          child: _buildProductCard(
+                              productName: product['name'] ?? 'Unknown Product',
+                              productImage: product['image'] ?? '',
+                              productPrice: product['price'] ?? "",
+                              productBrand:
+                                  product['brand'] ?? 'Unknown Brand'),
                         );
                       },
                     ),
@@ -372,10 +381,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProductCard() {
+  Widget _buildProductCard({
+    required String productName,
+    required String productImage,
+    required String productPrice,
+    required String productBrand,
+  }) {
+    final CartController cartController =
+        Get.find<CartController>(); // Access the CartController
+
     return Container(
-      width: 230,
-      height: 190,
+      width: 225,
+      height: 300,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -391,12 +408,11 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 100,
+            height: 210,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               image: DecorationImage(
-                image: NetworkImage(
-                    'https://www.acubemart.in/_next/static/media/hero-image-1.a2f50314.jpeg'),
+                image: NetworkImage(productImage),
                 fit: BoxFit.fill,
               ),
             ),
@@ -407,28 +423,53 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Product Title',
+                  productName,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'ACUBEMART',
+                  productBrand,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 16,
                     color: Colors.grey,
                   ),
                 ),
                 SizedBox(height: 8),
-                Text(
-                  '\$130.00',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      productPrice.toString(),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.add_circle,
+                        size: 34,
+                        color: Color.fromRGBO(251, 137, 4, 1),
+                      ),
+                      onPressed: () {
+                        CartItem cartItem = CartItem(
+                          name: productName,
+                          price: double.parse(productPrice),
+                          quantity: 1,
+                          image: productImage,
+                          brand: productBrand,
+                        );
+                        String price = double.parse(productPrice).toString();
+                        int quantity = 1;
+                        cartController.addItem(cartItem);
+                        Get.snackbar('Added to Cart', productName);
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
