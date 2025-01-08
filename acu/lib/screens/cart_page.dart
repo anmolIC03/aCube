@@ -17,7 +17,7 @@ class _CartPageState extends State<CartPage> {
   @override
   void initState() {
     super.initState();
-    updateItemCount(); // Initialize item count
+    updateItemCount();
   }
 
   // Update the total item count

@@ -5,7 +5,6 @@ class CartController extends GetxController {
   // Cart items map with observable properties
   var cartItems = <String, CartItem>{}.obs;
 
-  // Add item to the cart
   void addItem(CartItem item) {
     if (cartItems.containsKey(item.name)) {
       // If the item already exists, increment its quantity
@@ -14,10 +13,9 @@ class CartController extends GetxController {
       // If the item is not in the cart, add it with quantity 1
       cartItems[item.name] = item;
     }
-    update(); // Notify listeners for state update
+    update();
   }
 
-  // Remove item or decrement quantity
   void removeItem(String itemName) {
     if (cartItems.containsKey(itemName)) {
       var item = cartItems[itemName];
@@ -32,7 +30,6 @@ class CartController extends GetxController {
     }
   }
 
-  // Calculate total item count (sum of quantities)
   int calculateItemCount() {
     return cartItems.values
         .map((item) => item.quantity)

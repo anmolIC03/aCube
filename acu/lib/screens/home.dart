@@ -4,6 +4,8 @@ import 'package:acu/screens/components/cart_components/cart_item.dart';
 import 'package:acu/screens/components/cart_components/product_components/prodList.dart';
 import 'package:acu/screens/components/category_card.dart';
 import 'package:acu/screens/components/category_list.dart';
+import 'package:acu/screens/components/products/rating_list.dart';
+import 'package:acu/screens/prod_details.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
@@ -144,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: SizedBox(
-                    height: 340,
+                    height: 390,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: productList.length,
@@ -152,12 +154,35 @@ class _HomeScreenState extends State<HomeScreen> {
                         final product = productList[index];
                         return Padding(
                           padding: const EdgeInsets.only(right: 22.0),
-                          child: _buildProductCard(
-                              productName: product['name'] ?? 'Unknown Product',
-                              productImage: product['image'] ?? '',
-                              productPrice: product['price'] ?? "",
-                              productBrand:
-                                  product['brand'] ?? 'Unknown Brand'),
+                          child: GestureDetector(
+                            onTap: () {
+                              Get.to(() => ProductDetails(
+                                    productName:
+                                        product['name'] ?? 'Unknown Product',
+                                    productImage: product['image'] ?? '',
+                                    productPrice: product['price'] ?? "",
+                                    productBrand:
+                                        product['brand'] ?? 'Unknown Brand',
+                                    productRating: double.tryParse(
+                                            product['rating'] ?? '0') ??
+                                        0.0,
+                                    ratingCount: int.tryParse(
+                                            product['ratingCount'] ?? '0') ??
+                                        0,
+                                  ));
+                            },
+                            child: _buildProductCard(
+                                productName:
+                                    product['name'] ?? 'Unknown Product',
+                                productImage: product['image'] ?? '',
+                                productPrice: product['price'] ?? "",
+                                productBrand:
+                                    product['brand'] ?? 'Unknown Brand',
+                                productRating: product['rating'] ?? '',
+                                ratingCount: int.tryParse(
+                                        product['ratingCount'] ?? '0') ??
+                                    0),
+                          ),
                         );
                       },
                     ),
@@ -246,8 +271,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: ElevatedButton(
                                 onPressed: () {},
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color.fromRGBO(
-                                      185, 28, 28, 1.0), // Button color
+                                  backgroundColor:
+                                      Color.fromRGBO(185, 28, 28, 1.0),
                                   padding: EdgeInsets.symmetric(
                                       vertical: 18, horizontal: 20),
                                   shape: RoundedRectangleBorder(
@@ -386,13 +411,14 @@ class _HomeScreenState extends State<HomeScreen> {
     required String productImage,
     required String productPrice,
     required String productBrand,
+    required String productRating,
+    required int ratingCount,
   }) {
-    final CartController cartController =
-        Get.find<CartController>(); // Access the CartController
+    final CartController cartController = Get.find<CartController>();
 
     return Container(
-      width: 225,
-      height: 300,
+      width: 240,
+      height: 310,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -424,12 +450,17 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   productName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 SizedBox(height: 4),
+                StarRating(
+                    rating: double.parse(productRating),
+                    ratingCount: ratingCount),
                 Text(
                   productBrand,
                   style: TextStyle(
@@ -462,7 +493,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           quantity: 1,
                           image: productImage,
                           brand: productBrand,
+                          rating: double.parse(productRating),
                         );
+                        String rating = double.parse(productRating).toString();
                         String price = double.parse(productPrice).toString();
                         int quantity = 1;
                         cartController.addItem(cartItem);

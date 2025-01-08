@@ -4,6 +4,7 @@ class CartItem {
   final String brand;
   final double price;
   int quantity;
+  final double rating;
 
   CartItem({
     required this.name,
@@ -11,6 +12,7 @@ class CartItem {
     required this.brand,
     required this.price,
     this.quantity = 1,
+    required this.rating,
   });
 
   // Increment item quantity

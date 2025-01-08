@@ -95,6 +95,14 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
               (Icons.notifications_none),
               size: 28,
             )),
+        GestureDetector(
+          onTap: () {},
+          child: CircleAvatar(
+            radius: 40,
+            backgroundImage: AssetImage('lib/assets/hero1.jpeg'),
+          ),
+        ),
+        SizedBox(height: 16),
       ],
     );
   }
