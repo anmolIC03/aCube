@@ -1,3 +1,4 @@
+import 'package:acu/screens/components/hidden_drawer.dart';
 import 'package:acu/screens/home.dart';
 import 'package:acu/screens/pw_reset.dart';
 import 'package:acu/screens/signup_page.dart';
@@ -122,7 +123,7 @@ class _LoginPageState extends State<LoginPage> {
               ElevatedButton(
                 onPressed: () {
                   // Handle sign-in logic
-                  Get.to(() => HomeScreen());
+                  Get.to(() => HiddenDrawer());
                 },
                 child: Text(
                   'Sign In',

@@ -1,3 +1,4 @@
+import 'package:acu/screens/check_out.dart';
 import 'package:acu/screens/components/avail_card.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/cart_components/cart_item.dart';
@@ -533,6 +534,16 @@ class _ProductDetailsState extends State<ProductDetails> {
                             SizedBox(height: 10),
                             ElevatedButton(
                               onPressed: () {
+                                Get.to(CheckoutScreen(
+                                  productName: widget.productName,
+                                  productImage: widget.productImage,
+                                  productPrice:
+                                      double.parse(widget.productPrice),
+                                  productRating: widget.productRating,
+                                  deliveryAddress:
+                                      'ABC Avenue Street No 3, GNN, MBS NAgar, ND 18',
+                                ));
+
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                       content: Text("Proceeding to Payment")),

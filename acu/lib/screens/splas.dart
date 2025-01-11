@@ -13,7 +13,6 @@ class OnboardingScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Horizontal scroll for onboarding pages
           PageView(
             controller: controller.pageController,
             onPageChanged: controller.updatePageIndicator,
@@ -37,7 +36,7 @@ class OnboardingScreen extends StatelessWidget {
             ],
           ),
 
-          // Skip Button - Positioned at top right
+          // Skip Button
           Positioned(
             top: 40,
             right: 20,
@@ -53,7 +52,7 @@ class OnboardingScreen extends StatelessWidget {
           // Dot navigation
           OnboardingDotNavigation(),
 
-          // Next Button - Bottom Right
+          // Next Button
           Positioned(
             bottom: 30,
             right: 20,
@@ -65,7 +64,7 @@ class OnboardingScreen extends StatelessWidget {
             ),
           ),
 
-          // Prev Button - Bottom Left
+          // Prev Button
           Positioned(
             bottom: 30,
             left: 20,

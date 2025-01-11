@@ -1,3 +1,4 @@
+import 'package:acu/screens/all_categories.dart';
 import 'package:acu/screens/cart_page.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/cart_components/cart_item.dart';
@@ -5,7 +6,9 @@ import 'package:acu/screens/components/cart_components/product_components/prodLi
 import 'package:acu/screens/components/category_card.dart';
 import 'package:acu/screens/components/category_list.dart';
 import 'package:acu/screens/components/products/rating_list.dart';
+import 'package:acu/screens/components/wishlist_controller.dart';
 import 'package:acu/screens/prod_details.dart';
+import 'package:acu/screens/wishlist.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
@@ -100,7 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Get.to(() => ViewAllCategoriesScreen());
+                        },
                         child: Text(
                           'VIEW ALL',
                           style: TextStyle(color: Colors.red),
@@ -115,12 +120,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     children: [
-                      CategoryCard(icon: Icons.pedal_bike, label: 'Bikes'),
-                      CategoryCard(icon: Icons.car_rental, label: 'Cars'),
-                      CategoryCard(icon: Icons.chair, label: 'Riding Gears'),
                       CategoryCard(
-                          icon: Icons.electrical_services, label: 'Goggles'),
-                      CategoryCard(icon: Icons.kitchen, label: 'Accessories'),
+                        icon: Icons.pedal_bike,
+                        label: 'Bikes',
+                        onTap: () {},
+                      ),
+                      CategoryCard(
+                        icon: Icons.car_rental,
+                        label: 'Cars',
+                        onTap: () {},
+                      ),
+                      CategoryCard(
+                        icon: Icons.chair,
+                        label: 'Riding Gears',
+                        onTap: () {},
+                      ),
+                      CategoryCard(
+                        icon: Icons.electrical_services,
+                        label: 'Goggles',
+                        onTap: () {},
+                      ),
+                      CategoryCard(
+                        icon: Icons.kitchen,
+                        label: 'Accessories',
+                        onTap: () {},
+                      ),
                     ],
                   ),
                 ),
@@ -230,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           RichText(
-                            text: TextSpan(
+                            text: const TextSpan(
                               text: 'GET 15% OFF*', // Custom text
                               style: TextStyle(
                                 fontSize: 28,
@@ -326,6 +350,9 @@ class _HomeScreenState extends State<HomeScreen> {
               GButton(
                 icon: Icons.favorite,
                 text: 'Wishlist',
+                onPressed: () {
+                  Get.to(() => WishlistScreen());
+                },
               ),
               GButton(
                 icon: Icons.shopping_cart,
@@ -415,6 +442,10 @@ class _HomeScreenState extends State<HomeScreen> {
     required int ratingCount,
   }) {
     final CartController cartController = Get.find<CartController>();
+    final wishlistController = Get.find<WishlistController>();
+
+    // Wishlist controller or list
+    final wishlist = <CartItem>[].obs;
 
     return Container(
       width: 240,
@@ -433,15 +464,52 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 210,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              image: DecorationImage(
-                image: NetworkImage(productImage),
-                fit: BoxFit.fill,
+          Stack(
+            children: [
+              Container(
+                height: 210,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  image: DecorationImage(
+                    image: NetworkImage(productImage),
+                    fit: BoxFit.fill,
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Obx(() {
+                  final isInWishlist = wishlistController.wishlist
+                      .any((item) => item.name == productName);
+                  return IconButton(
+                    icon: Icon(
+                      isInWishlist ? Icons.favorite : Icons.favorite_border,
+                      color: isInWishlist ? Colors.red : Colors.grey,
+                    ),
+                    onPressed: () {
+                      if (isInWishlist) {
+                        wishlistController.removeFromWishlist(productName);
+                        Get.snackbar('Removed from Wishlist', productName);
+                      } else {
+                        // Add to wishlist
+                        wishlistController.addToWishlist(
+                          CartItem(
+                            name: productName,
+                            price: double.parse(productPrice),
+                            quantity: 1,
+                            image: productImage,
+                            brand: productBrand,
+                            rating: double.parse(productRating),
+                          ),
+                        );
+                        Get.snackbar('Added to Wishlist', productName);
+                      }
+                    },
+                  );
+                }),
+              ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -459,8 +527,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 SizedBox(height: 4),
                 StarRating(
-                    rating: double.parse(productRating),
-                    ratingCount: ratingCount),
+                  rating: double.parse(productRating),
+                  ratingCount: ratingCount,
+                ),
                 Text(
                   productBrand,
                   style: TextStyle(
@@ -473,7 +542,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      productPrice.toString(),
+                      '\$${productPrice.toString()}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -495,9 +564,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           brand: productBrand,
                           rating: double.parse(productRating),
                         );
-                        String rating = double.parse(productRating).toString();
-                        String price = double.parse(productPrice).toString();
-                        int quantity = 1;
                         cartController.addItem(cartItem);
                         Get.snackbar('Added to Cart', productName);
                       },

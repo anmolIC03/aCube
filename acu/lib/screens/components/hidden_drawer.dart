@@ -1,7 +1,9 @@
 import 'package:acu/screens/components/products/exhausts.dart';
 import 'package:acu/screens/help.dart';
 import 'package:acu/screens/home.dart';
+import 'package:acu/screens/profile.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hidden_drawer_menu/hidden_drawer_menu.dart';
 import 'package:hidden_drawer_menu/model/item_hidden_menu.dart';
 import 'package:hidden_drawer_menu/model/screen_hidden_drawer.dart';
@@ -96,7 +98,9 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
               size: 28,
             )),
         GestureDetector(
-          onTap: () {},
+          onTap: () {
+            Get.to(() => ProfileScreen());
+          },
           child: CircleAvatar(
             radius: 40,
             backgroundImage: AssetImage('lib/assets/hero1.jpeg'),
