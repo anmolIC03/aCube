@@ -1,3 +1,4 @@
+import 'package:acu/screens/all_categories.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/drawer_screen.dart';
 import 'package:acu/screens/components/hidden_drawer.dart';
@@ -6,6 +7,7 @@ import 'package:acu/screens/home.dart';
 import 'package:acu/screens/login_page.dart';
 import 'package:acu/screens/signup_page.dart';
 import 'package:acu/screens/splas.dart';
+import 'package:acu/screens/view_all.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -28,7 +30,7 @@ class _MainAppState extends State<MainApp> {
     Get.put(CartController());
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      home: OnboardingScreen(),
+      home: HiddenDrawer(),
     );
   }
 }

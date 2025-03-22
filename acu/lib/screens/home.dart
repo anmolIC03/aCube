@@ -1,10 +1,11 @@
+import 'package:acu/models/product_models.dart';
 import 'package:acu/screens/all_categories.dart';
 import 'package:acu/screens/cart_page.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/cart_components/cart_item.dart';
-import 'package:acu/screens/components/cart_components/product_components/prodList.dart';
 import 'package:acu/screens/components/category_card.dart';
 import 'package:acu/screens/components/category_list.dart';
+import 'package:acu/screens/components/home_controller.dart';
 import 'package:acu/screens/components/products/rating_list.dart';
 import 'package:acu/screens/components/wishlist_controller.dart';
 import 'package:acu/screens/prod_details.dart';
@@ -12,6 +13,8 @@ import 'package:acu/screens/wishlist.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
+
+import 'components/cart_components/product_components/prodList.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -21,6 +24,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final PageController _pageController = PageController(viewportFraction: 0.8);
   final TextEditingController _emailController = TextEditingController();
+  final HomeController homeController = Get.put(HomeController());
+
   int selectedIndex = 0;
 
   @override
@@ -169,49 +174,42 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Product Grid Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: SizedBox(
-                    height: 390,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: productList.length,
-                      itemBuilder: (context, index) {
-                        final product = productList[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 22.0),
-                          child: GestureDetector(
-                            onTap: () {
-                              Get.to(() => ProductDetails(
-                                    productName:
-                                        product['name'] ?? 'Unknown Product',
-                                    productImage: product['image'] ?? '',
-                                    productPrice: product['price'] ?? "",
-                                    productBrand:
-                                        product['brand'] ?? 'Unknown Brand',
-                                    productRating: double.tryParse(
-                                            product['rating'] ?? '0') ??
-                                        0.0,
-                                    ratingCount: int.tryParse(
-                                            product['ratingCount'] ?? '0') ??
-                                        0,
-                                  ));
-                            },
-                            child: _buildProductCard(
-                                productName:
-                                    product['name'] ?? 'Unknown Product',
-                                productImage: product['image'] ?? '',
-                                productPrice: product['price'] ?? "",
-                                productBrand:
-                                    product['brand'] ?? 'Unknown Brand',
-                                productRating: product['rating'] ?? '',
-                                ratingCount: int.tryParse(
-                                        product['ratingCount'] ?? '0') ??
-                                    0),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  child: Obx(() {
+                    if (homeController.isLoading.value) {
+                      return Center(child: CircularProgressIndicator());
+                    } else if (homeController.productList.isEmpty) {
+                      return Center(child: Text('No products found'));
+                    } else {
+                      return SizedBox(
+                        height: 390,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: homeController.productList.length,
+                          itemBuilder: (context, index) {
+                            final product = homeController.productList[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 22.0),
+                              child: GestureDetector(
+                                onTap: () {
+                                  Get.to(() => ProductDetails(
+                                        productName: product.name,
+                                        productImage: product.imageUrl,
+                                        productPrice: product.price.toString(),
+                                        productBrand: product.brand,
+                                        productRating: product.rating,
+                                        ratingCount: product.ratingCount,
+                                      ));
+                                },
+                                child: _buildProductCard(product),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }
+                  }),
                 ),
+
                 SizedBox(height: 20),
                 // Join Our ACUBE Plus Section
                 Container(
@@ -433,14 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProductCard({
-    required String productName,
-    required String productImage,
-    required String productPrice,
-    required String productBrand,
-    required String productRating,
-    required int ratingCount,
-  }) {
+  Widget _buildProductCard(Product product) {
     final CartController cartController = Get.find<CartController>();
     final wishlistController = Get.find<WishlistController>();
 
@@ -471,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                   image: DecorationImage(
-                    image: NetworkImage(productImage),
+                    image: NetworkImage(product.imageUrl),
                     fit: BoxFit.fill,
                   ),
                 ),
@@ -481,7 +472,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 right: 10,
                 child: Obx(() {
                   final isInWishlist = wishlistController.wishlist
-                      .any((item) => item.name == productName);
+                      .any((item) => item.name == product.name);
                   return IconButton(
                     icon: Icon(
                       isInWishlist ? Icons.favorite : Icons.favorite_border,
@@ -489,21 +480,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     onPressed: () {
                       if (isInWishlist) {
-                        wishlistController.removeFromWishlist(productName);
-                        Get.snackbar('Removed from Wishlist', productName);
+                        wishlistController.removeFromWishlist(product.name);
+                        Get.snackbar('Removed from Wishlist', product.name);
                       } else {
                         // Add to wishlist
                         wishlistController.addToWishlist(
                           CartItem(
-                            name: productName,
-                            price: double.parse(productPrice),
+                            name: product.name,
+                            price: product.price,
                             quantity: 1,
-                            image: productImage,
-                            brand: productBrand,
-                            rating: double.parse(productRating),
+                            image: product.imageUrl,
+                            brand: product.brand,
+                            rating: product.rating,
                           ),
                         );
-                        Get.snackbar('Added to Wishlist', productName);
+                        Get.snackbar('Added to Wishlist', product.name);
                       }
                     },
                   );
@@ -517,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  productName,
+                  product.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -527,11 +518,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 SizedBox(height: 4),
                 StarRating(
-                  rating: double.parse(productRating),
-                  ratingCount: ratingCount,
+                  rating: product.rating,
+                  ratingCount: product.ratingCount,
                 ),
                 Text(
-                  productBrand,
+                  product.brand,
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
@@ -542,7 +533,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '\$${productPrice.toString()}',
+                      '\₹${product.price.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -557,15 +548,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       onPressed: () {
                         CartItem cartItem = CartItem(
-                          name: productName,
-                          price: double.parse(productPrice),
+                          name: product.name,
+                          price: product.price,
                           quantity: 1,
-                          image: productImage,
-                          brand: productBrand,
-                          rating: double.parse(productRating),
+                          image: product.imageUrl,
+                          brand: product.brand,
+                          rating: product.rating,
                         );
                         cartController.addItem(cartItem);
-                        Get.snackbar('Added to Cart', productName);
+                        Get.snackbar('Added to Cart', product.name);
                       },
                     ),
                   ],

@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:acu/screens/login_page.dart';
 import 'package:acu/screens/verify.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 
 class SignupPage extends StatefulWidget {
   @override
@@ -15,6 +18,56 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   bool _obscureText = true;
+  bool isLoading = false;
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> registerUser() async {
+    final String fullName = _fullNameController.text.trim();
+    final String email = _emailController.text.trim();
+    final String password = _passwordController.text.trim();
+    final String confirmPassword = _confirmPasswordController.text.trim();
+
+    if (fullName.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
+      _showMessage("All fields are required!");
+      return;
+    }
+    if (password != confirmPassword) {
+      _showMessage("Passwords do not match!");
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+    final url = Uri.parse('https://backend.acubemart.in/api/user/register');
+
+    try {
+      final response = await http.post(url,
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode(
+              {"name": fullName, "email": email, "password": password}));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        Get.to(VerificationScreen(email: email));
+      } else {
+        _showMessage(responseData['message'] ?? "Signup failed. Try again");
+      }
+    } catch (e) {
+      _showMessage("Error: ${e.toString()}");
+    }
+    setState(() {
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,8 +161,7 @@ class _SignupPageState extends State<SignupPage> {
                   ElevatedButton(
                     onPressed: () {
                       // Handle sign-up logic
-                      Get.to(() =>
-                          VerificationScreen(email: _emailController.text));
+                      isLoading ? null : registerUser();
                     },
                     child: Text(
                       'Sign Up',

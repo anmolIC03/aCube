@@ -1,195 +1,198 @@
+import 'package:acu/screens/prod_details.dart';
 import 'package:flutter/material.dart';
+import 'package:acu/services/api_services.dart';
 import 'package:get/get.dart';
 
 class ViewAllScreen extends StatefulWidget {
-  final Map<String, List<Map<String, String>>> items;
-
-  ViewAllScreen({required this.items});
-
   @override
   _ViewAllScreenState createState() => _ViewAllScreenState();
 }
 
 class _ViewAllScreenState extends State<ViewAllScreen> {
-  String? selectedCategory;
+  List<Map<String, String>> categoryList = [];
+  String selectedCategoryId = '';
+  Future<List<dynamic>>? futureProducts;
 
   @override
   void initState() {
     super.initState();
-    selectedCategory = null;
+    fetchCategories();
+  }
+
+  /// 🔹 Fetch all categories
+  Future<void> fetchCategories() async {
+    List<Map<String, String>> categories =
+        await CategoryApiService.fetchCategories();
+    setState(() {
+      categoryList = categories;
+      if (categoryList.isNotEmpty) {
+        selectedCategoryId = categoryList.first['id']!; // Default selection
+        fetchProducts(selectedCategoryId);
+      }
+    });
+  }
+
+  /// 🔹 Fetch products when a category is clicked
+  void fetchProducts(String categoryId) {
+    setState(() {
+      selectedCategoryId = categoryId;
+      futureProducts = CategoryApiService.fetchProductsByCategoryId(categoryId);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final filteredItems = selectedCategory != null
-        ? widget.items[selectedCategory] ?? []
-        : widget.items.values.expand((itemList) => itemList).toList();
-
-    final similarCategories = widget.items.keys.toList();
-
     return Scaffold(
-      backgroundColor: Colors.grey.shade200,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          icon: Icon(Icons.arrow_back_ios_new),
           onPressed: () {
             Get.back();
           },
         ),
-        toolbarHeight: 70,
         centerTitle: true,
         title: Text(
-          'REFINED BY MODELS',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          "All Categories",
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
-        actions: [
-          IconButton(
-              onPressed: () {},
-              icon: Icon(
-                Icons.favorite_border_outlined,
-                size: 28,
-                color: Colors.red,
-              ))
-        ],
       ),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(height: 16),
-          SizedBox(
+          /// 🔹 Horizontally Scrollable Category Bar
+          Container(
             height: 50,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: similarCategories.length,
-              itemBuilder: (context, index) {
-                final category = similarCategories[index];
-                final isActive = selectedCategory == category;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedCategory =
-                            isActive ? null : category; // Toggle selection
-                      });
-                    },
-                    child: Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      elevation: isActive ? 4 : 1,
-                      child: Container(
-                        width: 120,
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          category,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isActive ? Colors.red : Colors.black,
+            color: Colors.grey[100],
+            child: categoryList.isEmpty
+                ? Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: categoryList.map((category) {
+                        bool isSelected = selectedCategoryId == category['id'];
+                        return GestureDetector(
+                          onTap: () => fetchProducts(category['id']!),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 18),
+                            margin: EdgeInsets.symmetric(horizontal: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              border: isSelected
+                                  ? Border(
+                                      bottom: BorderSide(
+                                          color: Colors.red, width: 3),
+                                    )
+                                  : null,
+                            ),
+                            child: Center(
+                              child: Text(
+                                category['name']!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? Colors.red : Colors.black,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      }).toList(),
                     ),
+                  ),
+          ),
+
+          /// 🔹 Display Products Below
+          Expanded(
+            child: FutureBuilder<List<dynamic>>(
+              future: futureProducts,
+              builder: (context, snapshot) {
+                if (futureProducts == null) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text("Error loading products"));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(child: Text("No products found"));
+                }
+
+                List<dynamic> products = snapshot.data!;
+                return SingleChildScrollView(
+                  child: Column(
+                    children: products.map((item) {
+                      return GestureDetector(
+                        onTap: () {
+                          /// 🔹 Extract correct data types
+                          double productRating = (item['rating'] is num)
+                              ? (item['rating'] as num).toDouble()
+                              : 0.0;
+                          int ratingCount = (item['rating_count'] is num)
+                              ? (item['rating_count'] as num).toInt()
+                              : 0;
+
+                          /// 🔹 Navigate to `ProductDetails`
+                          Get.to(() => ProductDetails(
+                                productName: item['name'] ?? 'Unknown',
+                                productImage: (item['image'] is List &&
+                                        item['image'].isNotEmpty)
+                                    ? item['image'][0]['url']
+                                    : 'https://via.placeholder.com/150',
+                                productPrice:
+                                    item['price']?.toString() ?? 'N/A',
+                                productBrand: (item['brand'] is Map)
+                                    ? item['brand']['name'] ?? 'Unknown'
+                                    : 'Unknown',
+                                productRating: productRating,
+                                ratingCount: ratingCount,
+                              ));
+                        },
+                        child: _buildItemCard(item),
+                      );
+                    }).toList(),
                   ),
                 );
               },
             ),
           ),
-          SizedBox(height: 16),
-          Expanded(
-            child: filteredItems.isNotEmpty
-                ? ListView.builder(
-                    itemCount: filteredItems.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredItems[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                          elevation: 4,
-                          margin: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 8),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Row(
-                              children: [
-                                // Image Section
-                                Container(
-                                  height: 80,
-                                  width: 80,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    image: DecorationImage(
-                                      image: NetworkImage(item['imageUrl']!),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                // Text Section
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item['model']!,
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        item['type']!,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.star,
-                                            size: 18,
-                                            color: Colors.yellow,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            item['rating']!,
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              color: Colors.black54,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  )
-                : Center(
-                    child: Text(
-                      'No items available for this category',
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
-                    ),
-                  ),
-          ),
         ],
+      ),
+    );
+  }
+
+  /// 🔹 Product Card UI
+  Widget _buildItemCard(Map<String, dynamic> item) {
+    String imageUrl = (item['image'] is List && item['image'].isNotEmpty)
+        ? item['image'][0]['url']
+        : 'https://via.placeholder.com/150';
+
+    String model = 'Unknown Model';
+    if (item['model'] is List && item['model'].isNotEmpty) {
+      model = item['model'][0]['name'] ?? 'Unknown Model';
+    }
+
+    String type = 'Unknown Type';
+    if (item['type'] is List && item['type'].isNotEmpty) {
+      type = item['type'].map((t) => t['name']).join(", ");
+    }
+
+    double rating =
+        (item['rating'] is num) ? (item['rating'] as num).toDouble() : 0.0;
+
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: ListTile(
+        contentPadding: EdgeInsets.all(10),
+        leading:
+            Image.network(imageUrl, width: 60, height: 60, fit: BoxFit.cover),
+        title: Text(item['name'] ?? 'Unknown Item',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        subtitle: Text(
+            "Model: $model\nType: $type\nRating: ${rating.toStringAsFixed(1)}"),
       ),
     );
   }

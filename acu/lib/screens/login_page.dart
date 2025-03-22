@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:acu/screens/components/hidden_drawer.dart';
 import 'package:acu/screens/home.dart';
 import 'package:acu/screens/pw_reset.dart';
 import 'package:acu/screens/signup_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 
 class LoginPage extends StatefulWidget {
   @override
@@ -15,6 +18,43 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _obscureText = true;
+  bool isLoading = false;
+
+  Future<void> login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      Get.snackbar("Error", "Please enter email & password");
+      return;
+    }
+    setState(() {
+      isLoading = true;
+    });
+    final url = Uri.parse('https://backend.acubemart.in/api/user/login/');
+    try {
+      final response = await http.post(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({"email": email, "password": password}));
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        //String token = responseData['token'];
+
+        Get.snackbar("Success", "Login successful!");
+        Get.offAll(() => HiddenDrawer()); // Navigate to the home screen
+      } else {
+        Get.snackbar("Error", responseData["message"]);
+      }
+    } catch (e) {
+      Get.snackbar("Error", "Something went wrong. Try again later.");
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +163,7 @@ class _LoginPageState extends State<LoginPage> {
               ElevatedButton(
                 onPressed: () {
                   // Handle sign-in logic
-                  Get.to(() => HiddenDrawer());
+                  isLoading ? null : login();
                 },
                 child: Text(
                   'Sign In',

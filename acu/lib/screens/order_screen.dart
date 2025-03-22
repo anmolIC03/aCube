@@ -1,6 +1,7 @@
 import 'package:acu/screens/payment_success.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 
 class OrderConfirmScreen extends StatelessWidget {
   final String productName;
@@ -15,6 +16,16 @@ class OrderConfirmScreen extends StatelessWidget {
     required this.productPrice,
     required this.productRating,
   }) : super(key: key);
+
+  Future<bool> checkAPI() async {
+    try {
+      final response = await http
+          .get(Uri.parse("https://www.backend.acubemart.in/api/product/all"));
+      return response.statusCode == 200; // Returns true if API is accessible
+    } catch (e) {
+      return false; // API call failed
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -254,8 +265,17 @@ class OrderConfirmScreen extends StatelessWidget {
                   ],
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    Get.to(() => PaymentSuccessWidget());
+                  onPressed: () async {
+                    bool isAPIAccesible = await checkAPI();
+                    if (isAPIAccesible) {
+                      Get.to(() => PaymentSuccessWidget());
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("API is unreachable"),
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromRGBO(185, 28, 28, 1.0),
