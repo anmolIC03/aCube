@@ -91,8 +91,9 @@ class _CategoryListSectionState extends State<CategoryListSection> {
                 },
                 child: Text(
                   'View All',
-                  style:
-                      TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Color.fromRGBO(185, 28, 28, 1.0),
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -118,7 +119,7 @@ class _CategoryListSectionState extends State<CategoryListSection> {
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: selectedCategory == category
-                        ? Colors.red
+                        ? Color.fromRGBO(185, 28, 28, 1.0)
                         : Colors.black,
                   ),
                   child: Text(

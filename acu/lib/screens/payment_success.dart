@@ -108,11 +108,11 @@ class PaymentSuccessWidget extends StatelessWidget {
 
               // Success message
               Text(
-                'Payment Done Successfully',
+                'Order Placed Successfully',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black, // Red color
+                  color: Colors.black,
                 ),
               ),
               SizedBox(height: 50),

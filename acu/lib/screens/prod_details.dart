@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 import 'package:acu/screens/check_out.dart';
 import 'package:acu/screens/components/avail_card.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
@@ -34,8 +37,46 @@ class _ProductDetailsState extends State<ProductDetails> {
   bool isAddressSame = false;
   bool ageConsent = false;
   bool wantDetails = false;
+  bool isLoading = false;
 
   final TextEditingController _emailController = TextEditingController();
+
+  Future<void> navigateToCheckout() async {
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final response = await http
+          .get(Uri.parse("https://backend.acubemart.in/api/product/all"));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        double deliveryCharges =
+            double.tryParse(data['deliveryCharges'].toString()) ?? 0.0;
+        double codCharges =
+            double.tryParse(data['codCharges'].toString()) ?? 0.0;
+        print("Navigating to CheckoutScreen...");
+        Get.to(() => CheckoutScreen(
+              productName: widget.productName,
+              productImage: widget.productImage,
+              productPrice: double.tryParse(widget.productPrice) ?? 0.0,
+              productRating: widget.productRating,
+              deliveryCharges: deliveryCharges,
+              codCharges: codCharges,
+            ));
+        print("Navigation command executed.");
+      } else {
+        throw Exception("Failed to fetch charges");
+      }
+    } catch (e) {
+      print("Error fetching delivery/cod charges: $e");
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +153,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
                     // Price
                     Text(
-                      'Price: \$${widget.productPrice}',
+                      'Price: \₹${widget.productPrice}',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -534,20 +575,11 @@ class _ProductDetailsState extends State<ProductDetails> {
                             SizedBox(height: 10),
                             ElevatedButton(
                               onPressed: () {
-                                Get.to(CheckoutScreen(
-                                  productName: widget.productName,
-                                  productImage: widget.productImage,
-                                  productPrice:
-                                      double.parse(widget.productPrice),
-                                  productRating: widget.productRating,
-                                  deliveryAddress:
-                                      'ABC Avenue Street No 3, GNN, MBS NAgar, ND 18',
-                                ));
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text("Proceeding to Payment")),
-                                );
+                                isLoading ? null : navigateToCheckout();
+                                // ScaffoldMessenger.of(context).showSnackBar(
+                                //   SnackBar(
+                                //       content: Text("Proceeding to Payment")),
+                                // );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Color.fromRGBO(
@@ -558,13 +590,24 @@ class _ProductDetailsState extends State<ProductDetails> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: Text(
-                                "PROCEED TO PAYMENT",
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      "PROCEED TO PAYMENT",
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white),
+                                    ),
                             ),
                             SizedBox(height: 30),
                           ],

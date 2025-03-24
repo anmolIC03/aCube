@@ -10,8 +10,11 @@ import 'package:acu/screens/splas.dart';
 import 'package:acu/screens/view_all.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await GetStorage.init(); // Initialize GetStorage before using it
   runApp(const MainApp());
 }
 
@@ -23,14 +26,25 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
+  final storage = GetStorage();
+
   @override
-  Widget build(BuildContext context) {
-    WidgetsFlutterBinding.ensureInitialized();
+  void initState() {
+    super.initState();
     Get.put(WishlistController());
     Get.put(CartController());
+  }
+
+  Widget getInitialScreen() {
+    bool isLoggedIn = storage.read("isLoggedIn") ?? false;
+    return isLoggedIn ? HiddenDrawer() : OnboardingScreen();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HiddenDrawer(),
+      home: getInitialScreen(),
     );
   }
 }

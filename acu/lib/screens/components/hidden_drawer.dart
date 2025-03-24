@@ -1,9 +1,11 @@
 import 'package:acu/screens/components/products/exhausts.dart';
 import 'package:acu/screens/help.dart';
 import 'package:acu/screens/home.dart';
+import 'package:acu/screens/login_page.dart';
 import 'package:acu/screens/profile.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:hidden_drawer_menu/hidden_drawer_menu.dart';
 import 'package:hidden_drawer_menu/model/item_hidden_menu.dart';
 import 'package:hidden_drawer_menu/model/screen_hidden_drawer.dart';
@@ -17,6 +19,7 @@ class HiddenDrawer extends StatefulWidget {
 
 class _HiddenDrawerState extends State<HiddenDrawer> {
   List<ScreenHiddenDrawer> _pages = [];
+  final storage = GetStorage(); // GetStorage instance
 
   final myTextStyle = TextStyle(
     fontSize: 18,
@@ -65,7 +68,37 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
         ),
         HomeScreen(),
       ),
+      // Logout option
+      ScreenHiddenDrawer(
+        ItemHiddenMenu(
+          name: 'Logout',
+          baseStyle: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: Colors.black,
+          ),
+          selectedStyle: myTextStyle,
+          colorLineSelected: Colors.red,
+          onTap: () => logout(),
+        ),
+        HomeScreen(),
+      ),
     ];
+  }
+
+  // Logout function
+  void logout() {
+    Get.defaultDialog(
+      title: "Logout",
+      middleText: "Are you sure you want to logout?",
+      textConfirm: "Yes",
+      textCancel: "No",
+      confirmTextColor: Colors.white,
+      onConfirm: () {
+        storage.erase(); // Clear user session
+        Get.offAll(() => LoginPage()); // Navigate to Login Screen
+      },
+    );
   }
 
   @override
@@ -92,21 +125,22 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
       ],
       actionsAppBar: [
         IconButton(
-            onPressed: () {},
-            icon: Icon(
-              (Icons.notifications_none),
-              size: 28,
-            )),
+          onPressed: () {},
+          icon: Icon(
+            (Icons.notifications_none),
+            size: 28,
+          ),
+        ),
         GestureDetector(
           onTap: () {
             Get.to(() => ProfileScreen());
           },
           child: CircleAvatar(
-            radius: 40,
+            radius: 20,
             backgroundImage: AssetImage('lib/assets/hero1.jpeg'),
           ),
         ),
-        SizedBox(height: 16),
+        SizedBox(width: 16),
       ],
     );
   }

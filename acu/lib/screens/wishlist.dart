@@ -29,35 +29,38 @@ class WishlistScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               )
-            : SizedBox(
-                height: 400,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 20,
-                      mainAxisSpacing: 15,
-                      childAspectRatio: 0.60,
-                    ),
-                    itemCount: wishlist.length,
-                    itemBuilder: (context, index) {
-                      final item = wishlist[index];
-                      return _buildWishlistCard(
-                        productName: item.name,
-                        productImage: item.image,
-                        productPrice: item.price.toString(),
-                        productBrand: item.brand,
-                        // Provide dynamic ratingCount
-                        onRemove: () {
-                          wishlistController.removeFromWishlist(item.name);
-                          Get.snackbar('Removed from Wishlist', item.name);
+            : Column(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: GridView.builder(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 20,
+                          mainAxisSpacing: 15,
+                          childAspectRatio: 0.60,
+                        ),
+                        itemCount: wishlist.length,
+                        itemBuilder: (context, index) {
+                          final item = wishlist[index];
+                          return _buildWishlistCard(
+                            productName: item.name,
+                            productImage: item.image,
+                            productPrice: item.price.toString(),
+                            productBrand: item.brand,
+                            // Provide dynamic ratingCount
+                            onRemove: () {
+                              wishlistController.removeFromWishlist(item.name);
+                              Get.snackbar('Removed from Wishlist', item.name);
+                            },
+                          );
                         },
-                      );
-                    },
+                      ),
+                    ),
                   ),
-                ),
+                ],
               );
       }),
     );
@@ -128,7 +131,7 @@ class WishlistScreen extends StatelessWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            '\$ $productPrice',
+                            '\₹$productPrice',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,

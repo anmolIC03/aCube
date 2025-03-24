@@ -1,12 +1,11 @@
 import 'dart:convert';
-
 import 'package:acu/screens/components/hidden_drawer.dart';
-import 'package:acu/screens/home.dart';
 import 'package:acu/screens/pw_reset.dart';
 import 'package:acu/screens/signup_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:get_storage/get_storage.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -20,6 +19,8 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscureText = true;
   bool isLoading = false;
 
+  final storage = GetStorage();
+
   Future<void> login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -28,26 +29,45 @@ class _LoginPageState extends State<LoginPage> {
       Get.snackbar("Error", "Please enter email & password");
       return;
     }
+
     setState(() {
       isLoading = true;
     });
-    final url = Uri.parse('https://backend.acubemart.in/api/user/login/');
+
+    final url = Uri.parse('https://backend.acubemart.in/api/user/login');
     try {
-      final response = await http.post(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({"email": email, "password": password}));
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({"email": email, "password": password}),
+      );
+
+      print("Response Status: ${response.statusCode}");
+      print("Response Body: ${response.body}");
 
       final responseData = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
-        //String token = responseData['token'];
+      if (response.statusCode == 200 && responseData["success"] == true) {
+        // ✅ Correctly extract `data`
+        final userData = responseData["data"];
+        if (userData != null && userData["_id"] != null) {
+          final userId = userData["_id"];
+          storage.write("userId", userId);
+          storage.write("isLoggedIn", true);
+          storage.write("userEmail", email);
 
-        Get.snackbar("Success", "Login successful!");
-        Get.offAll(() => HiddenDrawer()); // Navigate to the home screen
+          print("User ID stored: $userId");
+
+          Get.snackbar("Success", "Login successful!");
+          Get.offAll(() => HiddenDrawer());
+        } else {
+          Get.snackbar("Error", "Invalid user data in response.");
+        }
       } else {
-        Get.snackbar("Error", responseData["message"]);
+        Get.snackbar("Error", responseData["message"] ?? "Login failed");
       }
     } catch (e) {
+      print("Exception: $e");
       Get.snackbar("Error", "Something went wrong. Try again later.");
     } finally {
       setState(() {
@@ -63,8 +83,7 @@ class _LoginPageState extends State<LoginPage> {
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start, // Align content to the left
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: 60),
               Text(
@@ -147,7 +166,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   TextButton(
                     onPressed: () {
-                      // Handle forgot password logic
                       Get.to(() => ResetPwScreen());
                     },
                     child: Text(
@@ -161,81 +179,20 @@ class _LoginPageState extends State<LoginPage> {
 
               // Sign In Button with Custom Color
               ElevatedButton(
-                onPressed: () {
-                  // Handle sign-in logic
-                  isLoading ? null : login();
-                },
-                child: Text(
-                  'Sign In',
-                  style: TextStyle(color: Colors.white),
-                ),
+                onPressed: isLoading ? null : login,
+                child: isLoading
+                    ? CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                        'Sign In',
+                        style: TextStyle(color: Colors.white),
+                      ),
                 style: ElevatedButton.styleFrom(
                   minimumSize: Size(double.infinity, 60),
                   textStyle: TextStyle(fontSize: 16, color: Colors.white),
-                  backgroundColor:
-                      Color.fromRGBO(185, 28, 28, 1.0), // Custom red color
+                  backgroundColor: Color.fromRGBO(185, 28, 28, 1.0),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                ),
-              ),
-              SizedBox(height: 20),
-
-              // OR
-              Center(
-                child: Text('OR',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey)),
-              ),
-              SizedBox(height: 20),
-
-              // Login with Google and Facebook
-              Center(
-                child: Column(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // Google login logic
-                      },
-                      icon: Image.asset(
-                        'lib/assets/download.jpeg',
-                        width: 24,
-                        height: 24,
-                      ),
-                      label: Text(
-                        'Login with Google',
-                        style: TextStyle(color: Colors.black),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: Size(double.infinity, 60),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 20),
-              Center(
-                child: Column(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // Facebook login logic
-                      },
-                      icon: Icon(
-                        Icons.facebook,
-                        color: const Color.fromARGB(255, 47, 78, 104),
-                      ),
-                      label: Text(
-                        'Login with Facebook',
-                        style: TextStyle(color: Colors.black),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: Size(double.infinity, 60),
-                      ),
-                    ),
-                  ],
                 ),
               ),
               SizedBox(height: 20),
@@ -247,7 +204,6 @@ class _LoginPageState extends State<LoginPage> {
                   Text("Don't have an account?"),
                   TextButton(
                     onPressed: () {
-                      // Navigate to sign-up page
                       Get.to(() => SignupPage());
                     },
                     child: Text(

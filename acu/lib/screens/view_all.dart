@@ -58,7 +58,6 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
       ),
       body: Column(
         children: [
-          /// 🔹 Horizontally Scrollable Category Bar
           Container(
             height: 50,
             color: Colors.grey[100],
@@ -80,7 +79,9 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                               border: isSelected
                                   ? Border(
                                       bottom: BorderSide(
-                                          color: Colors.red, width: 3),
+                                          color:
+                                              Color.fromRGBO(185, 28, 28, 1.0),
+                                          width: 3),
                                     )
                                   : null,
                             ),
@@ -91,7 +92,9 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.red : Colors.black,
+                                  color: isSelected
+                                      ? Color.fromRGBO(185, 28, 28, 1.0)
+                                      : Colors.black,
                                 ),
                               ),
                             ),
@@ -140,8 +143,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                                         item['image'].isNotEmpty)
                                     ? item['image'][0]['url']
                                     : 'https://via.placeholder.com/150',
-                                productPrice:
-                                    item['price']?.toString() ?? 'N/A',
+                                productPrice: item['sp']?.toString() ?? 'N/A',
                                 productBrand: (item['brand'] is Map)
                                     ? item['brand']['name'] ?? 'Unknown'
                                     : 'Unknown',

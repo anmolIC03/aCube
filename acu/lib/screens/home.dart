@@ -194,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Get.to(() => ProductDetails(
                                         productName: product.name,
                                         productImage: product.imageUrl,
-                                        productPrice: product.price.toString(),
+                                        productPrice: product.sp.toString(),
                                         productBrand: product.brand,
                                         productRating: product.rating,
                                         ratingCount: product.ratingCount,
@@ -487,7 +487,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         wishlistController.addToWishlist(
                           CartItem(
                             name: product.name,
-                            price: product.price,
+                            price: product.sp,
                             quantity: 1,
                             image: product.imageUrl,
                             brand: product.brand,
@@ -533,7 +533,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '\₹${product.price.toStringAsFixed(2)}',
+                      '\₹${product.sp.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -549,7 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: () {
                         CartItem cartItem = CartItem(
                           name: product.name,
-                          price: product.price,
+                          price: product.sp,
                           quantity: 1,
                           image: product.imageUrl,
                           brand: product.brand,

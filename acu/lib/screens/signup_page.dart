@@ -57,7 +57,7 @@ class _SignupPageState extends State<SignupPage> {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        Get.to(VerificationScreen(email: email));
+        Get.to(LoginPage());
       } else {
         _showMessage(responseData['message'] ?? "Signup failed. Try again");
       }

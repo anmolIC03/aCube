@@ -1,4 +1,4 @@
-import 'package:acu/screens/prod_details.dart';
+import 'package:acu/screens/prodByCategory.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:acu/services/api_services.dart';
@@ -11,25 +11,26 @@ class ViewAllCategoriesScreen extends StatefulWidget {
 
 class _ViewAllCategoriesScreenState extends State<ViewAllCategoriesScreen> {
   List<Map<String, String>> types = [];
-  String selectedTypeId = '';
-  List<dynamic> allProducts = [];
-  List<dynamic> filteredProducts = [];
-  bool isLoadingProducts = false;
+  List<Map<String, String>> elements = [];
+
   bool isLoadingCategories = true;
+  bool isLoadingElements = true;
+  bool isLoadingProducts = true;
+  List<dynamic> allProducts = [];
 
   @override
   void initState() {
     super.initState();
     fetchTypes();
+    fetchElements();
     fetchAllProducts();
   }
 
   Future<void> fetchTypes() async {
     var response = await CategoryApiService.get('/type/all');
-
+    if (!mounted) return;
     if (response is Map<String, dynamic> && response.containsKey('data')) {
       List<dynamic> typeList = response['data'];
-
       if (typeList.isNotEmpty) {
         setState(() {
           types = typeList
@@ -46,37 +47,60 @@ class _ViewAllCategoriesScreenState extends State<ViewAllCategoriesScreen> {
     });
   }
 
-  Future<void> fetchAllProducts() async {
-    setState(() {
-      isLoadingProducts = true;
-    });
+  Future<void> fetchElements() async {
+    var response = await CategoryApiService.get('/element/all');
+    if (!mounted) return;
 
-    try {
-      var response = await CategoryApiService.get('/product/all');
-
-      if (response is Map<String, dynamic> && response.containsKey('data')) {
+    if (response is Map<String, dynamic> && response.containsKey('data')) {
+      List<dynamic> elementList = response['data'];
+      if (elementList.isNotEmpty) {
         setState(() {
-          allProducts = response['data'];
-          filteredProducts = allProducts;
+          elements = elementList
+              .map((element) => {
+                    'id': element['_id'].toString(),
+                    'name': element['name'].toString()
+                  })
+              .toList();
         });
       }
-    } finally {
-      setState(() {
-        isLoadingProducts = false;
-      });
     }
+    setState(() {
+      isLoadingElements = false;
+    });
   }
 
-  void filterProductsByType(String typeId) {
+  Future<void> fetchAllProducts() async {
+    var response = await CategoryApiService.get('/product/all');
+    if (!mounted) return;
+
+    if (response is Map<String, dynamic> && response.containsKey('data')) {
+      setState(() {
+        allProducts = response['data'];
+      });
+    }
     setState(() {
-      selectedTypeId = typeId;
-      filteredProducts = allProducts.where((product) {
-        if (product['type'] is List) {
-          return product['type'].any((t) => t['_id'] == typeId);
-        }
-        return false;
-      }).toList();
+      isLoadingProducts = false;
     });
+  }
+
+  void navigateToProductsScreen(String id, String name, bool isType) {
+    List<dynamic> filtered = allProducts.where((product) {
+      if (isType && product['type'] is List) {
+        return product['type'].any((t) => t['_id'] == id);
+      }
+      if (!isType && product['element'] is List) {
+        return product['element'].any((e) => e['_id'] == id);
+      }
+      return false;
+    }).toList();
+
+    Get.to(
+        () => ProductsScreen(
+              title: name,
+              id: id,
+              isType: isType,
+            ),
+        arguments: allProducts);
   }
 
   @override
@@ -93,203 +117,69 @@ class _ViewAllCategoriesScreenState extends State<ViewAllCategoriesScreen> {
         ),
         centerTitle: true,
         title: Text(
-          'CATEGORIES',
+          'CATEGORIES & ELEMENTS',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
         ),
         backgroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 1,
-            child: isLoadingCategories
-                ? Center(child: CircularProgressIndicator())
-                : types.isEmpty
-                    ? Center(child: Text("No categories available"))
-                    : Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: GridView.builder(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 3,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: isLoadingCategories || isLoadingElements
+            ? Center(child: CircularProgressIndicator())
+            : GridView.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 2.3,
+                ),
+                itemCount: types.length + elements.length,
+                itemBuilder: (context, index) {
+                  bool isType = index < types.length;
+                  final item =
+                      isType ? types[index] : elements[index - types.length];
+
+                  return GestureDetector(
+                    onTap: () => navigateToProductsScreen(
+                        item['id']!, item['name']!, isType),
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Colors.grey.shade300,
+                            width: 3,
                           ),
-                          itemCount: types.length,
-                          itemBuilder: (context, index) {
-                            final type = types[index];
-
-                            return GestureDetector(
-                              onTap: () {
-                                filterProductsByType(type['id']!);
-                              },
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 12, horizontal: 20),
-                                decoration: BoxDecoration(
-                                  color: selectedTypeId == type['id']
-                                      ? Colors.orange
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(50),
-                                  border: Border.all(
-                                    color: selectedTypeId == type['id']
-                                        ? Colors.orange
-                                        : Colors.grey.shade300,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
-                                      spreadRadius: 1,
-                                      offset: Offset(2, 2),
-                                    )
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    type['name']!,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: selectedTypeId == type['id']
-                                          ? Colors.white
-                                          : Colors.black,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 4,
+                            spreadRadius: 1,
+                            offset: Offset(2, 2),
+                          )
+                        ],
                       ),
-          ),
-
-          // Product List
-          Expanded(
-            flex: 2,
-            child: isLoadingProducts
-                ? Center(child: CircularProgressIndicator())
-                : filteredProducts.isEmpty
-                    ? Center(
-                        child: Text("No products available for this category"))
-                    : Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: ListView.builder(
-                          itemCount: filteredProducts.length,
-                          itemBuilder: (context, index) {
-                            return ProductCard(
-                                product: filteredProducts[index]);
-                          },
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            item['name']!,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Product Card Widget
-class ProductCard extends StatelessWidget {
-  final dynamic product;
-
-  const ProductCard({Key? key, required this.product}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    // Extract product details safely
-    final String productName = product['name'] ?? 'Unknown Product';
-    final String productImage =
-        (product['image'] != null && product['image'].isNotEmpty)
-            ? product['image'][0]['url']
-            : 'https://via.placeholder.com/150';
-    final double productPrice = product['price'] != null
-        ? double.tryParse(product['price'].toString()) ?? 0.0
-        : 0.0;
-
-    // FIXED: Handling product['brand'] as a list
-    final String productBrand =
-        (product['brand'] is List && product['brand'].isNotEmpty)
-            ? product['brand'][0]['name'].toString()
-            : 'Unknown Brand';
-
-    final double productRating = product['rating'] != null
-        ? double.tryParse(product['rating'].toString()) ?? 0.0
-        : 0.0;
-    final int ratingCount = product['ratingCount'] != null
-        ? int.tryParse(product['ratingCount'].toString()) ?? 0
-        : 0;
-
-    return GestureDetector(
-      onTap: () {
-        Get.to(() => ProductDetails(
-              productName: productName,
-              productImage: productImage,
-              productPrice: productPrice.toString(),
-              productBrand: productBrand,
-              productRating: productRating,
-              ratingCount: ratingCount,
-            ));
-      },
-      child: Card(
-        color: Colors.white,
-        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  productImage,
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.cover,
-                ),
+                    ),
+                  );
+                },
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      productName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      "₹${productPrice.toStringAsFixed(2)}",
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      productBrand,
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
