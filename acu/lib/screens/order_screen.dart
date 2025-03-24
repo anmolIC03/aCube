@@ -11,7 +11,7 @@ class OrderConfirmScreen extends StatefulWidget {
   final double productRating;
   final double deliveryCharges;
   final double codCharges;
-  final Map<String, dynamic> address;
+  final String addressId;
   final String phone;
 
   const OrderConfirmScreen({
@@ -23,7 +23,7 @@ class OrderConfirmScreen extends StatefulWidget {
     required this.productRating,
     required this.deliveryCharges,
     required this.codCharges,
-    required this.address,
+    required this.addressId,
     required this.phone,
   }) : super(key: key);
 
@@ -175,7 +175,7 @@ class _OrderConfirmScreenState extends State<OrderConfirmScreen> {
                             "image": widget.productImage,
                             "price": widget.productPrice,
                           },
-                          address: widget.address,
+                          addressId: widget.addressId,
                           phone: widget.phone,
                           totalAmount: totalAmount.toInt(),
                         ));

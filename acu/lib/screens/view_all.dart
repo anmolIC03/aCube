@@ -128,6 +128,8 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                     children: products.map((item) {
                       return GestureDetector(
                         onTap: () {
+                          String productId = item['_id'];
+
                           /// 🔹 Extract correct data types
                           double productRating = (item['rating'] is num)
                               ? (item['rating'] as num).toDouble()
@@ -138,6 +140,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
 
                           /// 🔹 Navigate to `ProductDetails`
                           Get.to(() => ProductDetails(
+                                productId: productId,
                                 productName: item['name'] ?? 'Unknown',
                                 productImage: (item['image'] is List &&
                                         item['image'].isNotEmpty)

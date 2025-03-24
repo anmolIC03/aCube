@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'order_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
+  final String productId;
   final String productName;
   final String productImage;
   final double productPrice;
@@ -22,6 +23,7 @@ class CheckoutScreen extends StatefulWidget {
     required this.productRating,
     required this.deliveryCharges,
     required this.codCharges,
+    required this.productId,
   }) : super(key: key);
 
   @override
@@ -67,10 +69,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           final user = decodedResponse["data"];
 
           if (user != null) {
-            // ✅ Extract phone number
             phoneNumber.value = user["phone"] ?? "";
 
-            // ✅ Extract addresses
             if (user.containsKey("address") && user["address"] is List) {
               addresses
                   .assignAll(List<Map<String, dynamic>>.from(user["address"]));
@@ -253,9 +253,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         productRating: widget.productRating,
                         deliveryCharges: widget.deliveryCharges,
                         codCharges: widget.codCharges,
-                        productId: '',
-                        address: {},
-                        phone: '',
+                        productId: widget.productId,
+                        addressId: selectedAddress.value!['_id'],
+                        phone: phoneNumber.value,
                       ));
                 },
                 child: Card(

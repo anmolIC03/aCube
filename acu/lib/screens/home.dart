@@ -192,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: GestureDetector(
                                 onTap: () {
                                   Get.to(() => ProductDetails(
+                                        productId: product.id,
                                         productName: product.name,
                                         productImage: product.imageUrl,
                                         productPrice: product.sp.toString(),

@@ -92,6 +92,7 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String productId = product['_id'];
     final String productName = product['name'] ?? 'Unknown Product';
     final String productImage =
         (product['image'] != null && product['image'].isNotEmpty)
@@ -107,6 +108,7 @@ class ProductCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         Get.to(() => ProductDetails(
+              productId: productId,
               productName: productName,
               productImage: productImage,
               productPrice: productPrice.toString(),

@@ -7,14 +7,14 @@ import 'package:acu/screens/payment_success.dart';
 
 class PaymentMethodsScreen extends StatefulWidget {
   final Map<String, dynamic> product;
-  final Map<String, dynamic> address;
+  final String addressId;
   final String phone;
   final int totalAmount;
 
   const PaymentMethodsScreen({
     Key? key,
     required this.product,
-    required this.address,
+    required this.addressId,
     required this.phone,
     required this.totalAmount,
   }) : super(key: key);
@@ -25,15 +25,31 @@ class PaymentMethodsScreen extends StatefulWidget {
 
 class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
   String selectedMethod = "Cash On Delivery";
+  bool isLoading = false;
 
   Future<void> placeOrder() async {
+    if (isLoading) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
     final userId = GetStorage().read("userId");
+    final productId = widget.product["_id"];
+    final totalAmount = widget.totalAmount;
+    final phone = widget.phone;
+    final addressId = widget.addressId; // This is already an ObjectId
 
     if (userId == null ||
-        widget.product["_id"] == null ||
-        widget.totalAmount == 0 ||
-        widget.phone.isEmpty) {
-      Get.snackbar("Error", "Some required fields are missing. Please check.");
+        productId == null ||
+        totalAmount == 0 ||
+        phone.isEmpty ||
+        addressId.isEmpty) {
+      Get.snackbar("Error", "Missing required fields!",
+          snackPosition: SnackPosition.BOTTOM);
+      setState(() {
+        isLoading = false;
+      });
       return;
     }
 
@@ -41,28 +57,24 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       "userId": userId,
       "products": [
         {
-          "productId": widget.product["_id"], // Ensure _id is used correctly
+          "productId": productId,
           "quantity": 1,
         }
       ],
-      "total": widget.totalAmount,
-      "address": {
-        "street": widget.address["street"] ?? "",
-        "city": widget.address["city"] ?? "",
-        "state": widget.address["state"] ?? "",
-        "country": widget.address["country"] ?? "",
-        "pincode": widget.address["pincode"] ?? "",
-      },
-      "phone": widget.phone,
+      "total": totalAmount,
+      "address": addressId, // Send only the address ID
+      "phone": phone,
       "status": "pending",
-      "transactionId": [
-        {
-          "amount": widget.totalAmount,
-          "paymentMode": selectedMethod,
-          "status": "SUCCESS",
-        }
-      ],
-      "statusUpdateTime": [], // Include empty statusUpdateTime array
+      "transactionId": selectedMethod == "Cash On Delivery"
+          ? []
+          : [
+              {
+                "amount": totalAmount,
+                "paymentMode": selectedMethod,
+                "status": "SUCCESS",
+              }
+            ],
+      "statusUpdateTime": [],
     };
 
     print("Order Data: ${jsonEncode(orderData)}"); // Debugging
@@ -86,6 +98,10 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     } catch (e) {
       Get.snackbar("Error", "Something went wrong: ${e.toString()}",
           snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -132,7 +148,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             ),
             const SizedBox(height: 30),
             ElevatedButton(
-              onPressed: placeOrder,
+              onPressed: isLoading ? null : placeOrder,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color.fromRGBO(185, 28, 28, 1.0),
                 foregroundColor: Colors.white,
@@ -141,8 +157,18 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text("CONTINUE",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 3,
+                      ),
+                    )
+                  : Text("CONTINUE",
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ],
         ),

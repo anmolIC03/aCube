@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class ProductDetails extends StatefulWidget {
+  final String productId;
   final String productName;
   final String productImage;
   final String productPrice;
@@ -25,6 +26,7 @@ class ProductDetails extends StatefulWidget {
     required this.productBrand,
     required this.productRating,
     required this.ratingCount,
+    required this.productId,
   }) : super(key: key);
 
   @override
@@ -58,6 +60,7 @@ class _ProductDetailsState extends State<ProductDetails> {
             double.tryParse(data['codCharges'].toString()) ?? 0.0;
         print("Navigating to CheckoutScreen...");
         Get.to(() => CheckoutScreen(
+              productId: widget.productId,
               productName: widget.productName,
               productImage: widget.productImage,
               productPrice: double.tryParse(widget.productPrice) ?? 0.0,

@@ -54,8 +54,8 @@ class Product {
       sp: (json['sp'] != null)
           ? double.tryParse(json['sp'].toString()) ?? 0.0
           : 0.0,
-      rating: 0.0, // Placeholder
-      ratingCount: 0, // Placeholder
+      rating: 0.0,
+      ratingCount: 0,
     );
   }
 }
