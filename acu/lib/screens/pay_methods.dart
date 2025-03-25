@@ -77,7 +77,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       "statusUpdateTime": [],
     };
 
-    print("Order Data: ${jsonEncode(orderData)}"); // Debugging
+    print("Order Data: ${jsonEncode(orderData)}");
 
     try {
       final response = await http.post(
