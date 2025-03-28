@@ -22,29 +22,48 @@ class _ProductsScreenState extends State<ProductsScreen> {
   var isLoading = true.obs;
   var products = <dynamic>[].obs;
 
+  int page = 0; // Tracks the page number for lazy loading
+  int batchSize = 10; // Load products in batches of 10
+  var isFetchingMore =
+      false.obs; // Reactive boolean to prevent multiple requests
+
   @override
   void initState() {
     super.initState();
     fetchProducts();
   }
 
-  Future<void> fetchProducts() async {
+  Future<void> fetchProducts({bool isPagination = false}) async {
+    if (isPagination && isFetchingMore.value) return;
+
+    if (!isPagination) isLoading.value = true;
+    isFetchingMore.value = true;
+
     await Future.delayed(Duration(milliseconds: 500));
 
     List<dynamic> allProducts = Get.arguments ?? [];
 
-    List<dynamic> filtered = allProducts.where((product) {
-      if (widget.isType && product['type'] is List) {
-        return product['type'].any((t) => t['_id'] == widget.id);
-      }
-      if (!widget.isType && product['element'] is List) {
-        return product['element'].any((e) => e['_id'] == widget.id);
-      }
-      return false;
-    }).toList();
+    int startIndex = page * batchSize;
+    int endIndex = startIndex + batchSize;
 
-    products.assignAll(filtered);
-    isLoading.value = false;
+    if (startIndex >= allProducts.length) {
+      isFetchingMore.value = false;
+      return; // No more products to fetch
+    }
+
+    List<dynamic> newProducts = allProducts.sublist(startIndex,
+        endIndex > allProducts.length ? allProducts.length : endIndex);
+
+    if (mounted) {
+      if (isPagination) {
+        products.addAll(newProducts);
+      } else {
+        products.assignAll(newProducts);
+      }
+      page++;
+      isLoading.value = false;
+      isFetchingMore.value = false;
+    }
   }
 
   @override
@@ -72,12 +91,27 @@ class _ProductsScreenState extends State<ProductsScreen> {
         } else if (products.isEmpty) {
           return Center(child: Text("No products available"));
         } else {
-          return ListView.builder(
-            padding: EdgeInsets.all(16),
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              return ProductCard(product: products[index]);
+          return NotificationListener<ScrollNotification>(
+            onNotification: (ScrollNotification scrollInfo) {
+              if (scrollInfo.metrics.pixels >=
+                      scrollInfo.metrics.maxScrollExtent - 50 &&
+                  !isFetchingMore.value) {
+                fetchProducts(isPagination: true);
+              }
+              return true;
             },
+            child: ListView.builder(
+              padding: EdgeInsets.all(16),
+              itemCount: products.length + 1,
+              itemBuilder: (context, index) {
+                if (index == products.length) {
+                  return isFetchingMore.value
+                      ? Center(child: CircularProgressIndicator())
+                      : SizedBox();
+                }
+                return ProductCard(product: products[index]);
+              },
+            ),
           );
         }
       }),

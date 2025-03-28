@@ -32,7 +32,7 @@ class _CategoryListSectionState extends State<CategoryListSection> {
   Future<List<dynamic>> fetchProducts(String categoryId) async {
     print("🔵 Fetching products for category: $categoryId");
     List<dynamic> products =
-        await CategoryApiService.fetchProductsByCategoryId(categoryId);
+        await CategoryApiService.fetchProductsByCategoryId(categoryId, 1, 20);
     print("🟢 Received ${products.length} products for category $categoryId:");
     for (var product in products) {
       print("   ➜ Product ID: ${product['_id']}, Name: ${product['name']}");

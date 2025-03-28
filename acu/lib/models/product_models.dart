@@ -10,8 +10,10 @@ class Product {
   String model;
   double discount;
   double sp;
-  double rating; // Placeholder
-  int ratingCount; // Placeholder
+  double codCharges;
+  double deliveryCharges;
+  double rating;
+  int ratingCount;
 
   Product({
     required this.id,
@@ -25,8 +27,10 @@ class Product {
     required this.model,
     required this.discount,
     required this.sp,
-    this.rating = 0.0, // Default value
-    this.ratingCount = 0, // Default value
+    required this.codCharges,
+    required this.deliveryCharges,
+    this.rating = 0.0,
+    this.ratingCount = 0,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -53,6 +57,12 @@ class Product {
           : 0.0,
       sp: (json['sp'] != null)
           ? double.tryParse(json['sp'].toString()) ?? 0.0
+          : 0.0,
+      codCharges: (json['codCharges'] != null)
+          ? double.tryParse(json['codCharges'].toString()) ?? 0.0
+          : 0.0,
+      deliveryCharges: (json['deliveryCharges'] != null)
+          ? double.tryParse(json['deliveryCharges'].toString()) ?? 0.0
           : 0.0,
       rating: 0.0,
       ratingCount: 0,

@@ -10,10 +10,7 @@ class ViewAllCategoriesScreen extends StatefulWidget {
 }
 
 class _ViewAllCategoriesScreenState extends State<ViewAllCategoriesScreen> {
-  List<Map<String, String>> types = [];
   List<Map<String, String>> elements = [];
-
-  bool isLoadingCategories = true;
   bool isLoadingElements = true;
   bool isLoadingProducts = true;
   List<dynamic> allProducts = [];
@@ -21,30 +18,8 @@ class _ViewAllCategoriesScreenState extends State<ViewAllCategoriesScreen> {
   @override
   void initState() {
     super.initState();
-    fetchTypes();
     fetchElements();
     fetchAllProducts();
-  }
-
-  Future<void> fetchTypes() async {
-    var response = await CategoryApiService.get('/type/all');
-    if (!mounted) return;
-    if (response is Map<String, dynamic> && response.containsKey('data')) {
-      List<dynamic> typeList = response['data'];
-      if (typeList.isNotEmpty) {
-        setState(() {
-          types = typeList
-              .map((type) => {
-                    'id': type['_id'].toString(),
-                    'name': type['name'].toString()
-                  })
-              .toList();
-        });
-      }
-    }
-    setState(() {
-      isLoadingCategories = false;
-    });
   }
 
   Future<void> fetchElements() async {
@@ -83,12 +58,9 @@ class _ViewAllCategoriesScreenState extends State<ViewAllCategoriesScreen> {
     });
   }
 
-  void navigateToProductsScreen(String id, String name, bool isType) {
+  void navigateToProductsScreen(String id, String name) {
     List<dynamic> filtered = allProducts.where((product) {
-      if (isType && product['type'] is List) {
-        return product['type'].any((t) => t['_id'] == id);
-      }
-      if (!isType && product['element'] is List) {
+      if (product['element'] is List) {
         return product['element'].any((e) => e['_id'] == id);
       }
       return false;
@@ -98,9 +70,9 @@ class _ViewAllCategoriesScreenState extends State<ViewAllCategoriesScreen> {
         () => ProductsScreen(
               title: name,
               id: id,
-              isType: isType,
+              isType: false,
             ),
-        arguments: allProducts);
+        arguments: filtered);
   }
 
   @override
@@ -117,14 +89,14 @@ class _ViewAllCategoriesScreenState extends State<ViewAllCategoriesScreen> {
         ),
         centerTitle: true,
         title: Text(
-          'CATEGORIES & ELEMENTS',
+          'ELEMENTS',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
         ),
         backgroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: isLoadingCategories || isLoadingElements
+        child: isLoadingElements
             ? Center(child: CircularProgressIndicator())
             : GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -133,15 +105,13 @@ class _ViewAllCategoriesScreenState extends State<ViewAllCategoriesScreen> {
                   mainAxisSpacing: 16,
                   childAspectRatio: 2.3,
                 ),
-                itemCount: types.length + elements.length,
+                itemCount: elements.length,
                 itemBuilder: (context, index) {
-                  bool isType = index < types.length;
-                  final item =
-                      isType ? types[index] : elements[index - types.length];
+                  final item = elements[index];
 
                   return GestureDetector(
-                    onTap: () => navigateToProductsScreen(
-                        item['id']!, item['name']!, isType),
+                    onTap: () =>
+                        navigateToProductsScreen(item['id']!, item['name']!),
                     child: Container(
                       padding:
                           EdgeInsets.symmetric(vertical: 12, horizontal: 20),

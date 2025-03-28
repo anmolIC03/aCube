@@ -41,7 +41,7 @@ class CategoryApiService {
       print("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
-        return json.decode(response.body); // Return full response
+        return json.decode(response.body);
       } else {
         print("API Error: ${response.statusCode}");
         return {};
@@ -143,26 +143,36 @@ class CategoryApiService {
   }
 
   static Future<List<dynamic>> fetchProductsByCategoryId(
-      String categoryId) async {
+      String categoryId, int page, int limit) async {
+    print("Fetching products for category: $categoryId | Page: $page");
+
     var response = await CategoryApiService.get('/product/all');
 
     if (response is Map<String, dynamic> && response.containsKey('data')) {
       List<dynamic> allProducts = response['data'];
 
-      print("✅ Fetched ${allProducts.length} total products");
-
+      // ✅ Filter products based on categoryId
       List<dynamic> filteredProducts = allProducts.where((product) {
-        var categories = product['category']; // Expecting a List
-
+        var categories = product['category'];
         if (categories is List) {
           return categories.any((cat) => cat['_id'] == categoryId);
         }
-
         return false;
       }).toList();
 
-      print("🟢 Returning ${filteredProducts.length} filtered products");
-      return filteredProducts;
+      // ✅ Pagination Logic
+      int startIndex = (page - 1) * limit;
+      int endIndex = startIndex + limit;
+
+      if (startIndex >= filteredProducts.length) {
+        return []; // No more products available
+      }
+
+      List<dynamic> paginatedProducts = filteredProducts.sublist(
+          startIndex, endIndex.clamp(0, filteredProducts.length));
+
+      print("Returning ${paginatedProducts.length} products");
+      return paginatedProducts;
     }
 
     return [];

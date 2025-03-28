@@ -4,6 +4,10 @@ import 'package:acu/services/api_services.dart';
 import 'package:get/get.dart';
 
 class ViewAllScreen extends StatefulWidget {
+  final bool fromDrawer;
+
+  const ViewAllScreen({Key? key, this.fromDrawer = false}) : super(key: key);
+
   @override
   _ViewAllScreenState createState() => _ViewAllScreenState();
 }
@@ -11,53 +15,87 @@ class ViewAllScreen extends StatefulWidget {
 class _ViewAllScreenState extends State<ViewAllScreen> {
   List<Map<String, String>> categoryList = [];
   String selectedCategoryId = '';
-  Future<List<dynamic>>? futureProducts;
+
+  List<dynamic> products = [];
+  bool isLoading = false;
+  bool hasMore = true;
+  int page = 1;
+  final int limit = 10; // Load 10 products per request
+  ScrollController scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     fetchCategories();
-  }
 
-  /// 🔹 Fetch all categories
-  Future<void> fetchCategories() async {
-    List<Map<String, String>> categories =
-        await CategoryApiService.fetchCategories();
-    setState(() {
-      categoryList = categories;
-      if (categoryList.isNotEmpty) {
-        selectedCategoryId = categoryList.first['id']!; // Default selection
-        fetchProducts(selectedCategoryId);
+    // 🔹 Add Scroll Listener for Lazy Loading
+    scrollController.addListener(() {
+      if (scrollController.position.pixels ==
+              scrollController.position.maxScrollExtent &&
+          !isLoading &&
+          hasMore) {
+        fetchProducts();
       }
     });
   }
 
-  /// 🔹 Fetch products when a category is clicked
-  void fetchProducts(String categoryId) {
+  /// 🔹 Fetch categories from the backend
+  Future<void> fetchCategories() async {
+    List<Map<String, String>> categories =
+        await CategoryApiService.fetchCategories();
+
     setState(() {
-      selectedCategoryId = categoryId;
-      futureProducts = CategoryApiService.fetchProductsByCategoryId(categoryId);
+      categoryList = categories;
+      if (categoryList.isNotEmpty) {
+        selectedCategoryId = categoryList.first['id']!;
+        fetchProducts(); // Load initial products
+      }
+    });
+  }
+
+  /// 🔹 Fetch products with pagination (Lazy Loading)
+  Future<void> fetchProducts() async {
+    if (isLoading || !hasMore) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    List<dynamic> newProducts =
+        await CategoryApiService.fetchProductsByCategoryId(
+            selectedCategoryId, page, limit);
+
+    setState(() {
+      if (newProducts.length < limit) {
+        hasMore = false;
+      }
+      products.addAll(newProducts);
+      page++;
+      isLoading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new),
-          onPressed: () {
-            Get.back();
-          },
-        ),
-        centerTitle: true,
-        title: Text(
-          "All Categories",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-      ),
+      appBar: widget.fromDrawer
+          ? null
+          : AppBar(
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new),
+                onPressed: () {
+                  Get.back();
+                },
+              ),
+              centerTitle: true,
+              title: Text(
+                "All Categories",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+            ),
       body: Column(
         children: [
+          /// 🔹 Category Selection Bar
           Container(
             height: 50,
             color: Colors.grey[100],
@@ -69,13 +107,20 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                       children: categoryList.map((category) {
                         bool isSelected = selectedCategoryId == category['id'];
                         return GestureDetector(
-                          onTap: () => fetchProducts(category['id']!),
+                          onTap: () {
+                            setState(() {
+                              selectedCategoryId = category['id']!;
+                              products.clear();
+                              page = 1;
+                              hasMore = true;
+                            });
+                            fetchProducts();
+                          },
                           child: Container(
                             padding: EdgeInsets.symmetric(
                                 vertical: 12, horizontal: 18),
                             margin: EdgeInsets.symmetric(horizontal: 5),
                             decoration: BoxDecoration(
-                              color: Colors.transparent,
                               border: isSelected
                                   ? Border(
                                       bottom: BorderSide(
@@ -85,17 +130,15 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                                     )
                                   : null,
                             ),
-                            child: Center(
-                              child: Text(
-                                category['name']!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected
-                                      ? Color.fromRGBO(185, 28, 28, 1.0)
-                                      : Colors.black,
-                                ),
+                            child: Text(
+                              category['name']!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected
+                                    ? Color.fromRGBO(185, 28, 28, 1.0)
+                                    : Colors.black,
                               ),
                             ),
                           ),
@@ -105,62 +148,23 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                   ),
           ),
 
-          /// 🔹 Display Products Below
+          /// 🔹 Products List (Lazy Loading Enabled)
           Expanded(
-            child: FutureBuilder<List<dynamic>>(
-              future: futureProducts,
-              builder: (context, snapshot) {
-                if (futureProducts == null) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text("Error loading products"));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(child: Text("No products found"));
-                }
-
-                List<dynamic> products = snapshot.data!;
-                return SingleChildScrollView(
-                  child: Column(
-                    children: products.map((item) {
-                      return GestureDetector(
-                        onTap: () {
-                          String productId = item['_id'];
-
-                          /// 🔹 Extract correct data types
-                          double productRating = (item['rating'] is num)
-                              ? (item['rating'] as num).toDouble()
-                              : 0.0;
-                          int ratingCount = (item['rating_count'] is num)
-                              ? (item['rating_count'] as num).toInt()
-                              : 0;
-
-                          /// 🔹 Navigate to `ProductDetails`
-                          Get.to(() => ProductDetails(
-                                productId: productId,
-                                productName: item['name'] ?? 'Unknown',
-                                productImage: (item['image'] is List &&
-                                        item['image'].isNotEmpty)
-                                    ? item['image'][0]['url']
-                                    : 'https://via.placeholder.com/150',
-                                productPrice: item['sp']?.toString() ?? 'N/A',
-                                productBrand: (item['brand'] is Map)
-                                    ? item['brand']['name'] ?? 'Unknown'
-                                    : 'Unknown',
-                                productRating: productRating,
-                                ratingCount: ratingCount,
-                              ));
-                        },
-                        child: _buildItemCard(item),
-                      );
-                    }).toList(),
+            child: products.isEmpty && !isLoading
+                ? Center(child: Text("No products found"))
+                : ListView.builder(
+                    controller: scrollController,
+                    itemCount: products.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index < products.length) {
+                        return _buildItemCard(products[index]);
+                      } else {
+                        return isLoading
+                            ? Center(child: CircularProgressIndicator())
+                            : SizedBox(); // Hide when no more products
+                      }
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
@@ -186,18 +190,34 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
     double rating =
         (item['rating'] is num) ? (item['rating'] as num).toDouble() : 0.0;
 
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        contentPadding: EdgeInsets.all(10),
-        leading:
-            Image.network(imageUrl, width: 60, height: 60, fit: BoxFit.cover),
-        title: Text(item['name'] ?? 'Unknown Item',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        subtitle: Text(
-            "Model: $model\nType: $type\nRating: ${rating.toStringAsFixed(1)}"),
+    return GestureDetector(
+      onTap: () {
+        Get.to(() => ProductDetails(
+              productId: item['_id'],
+              productName: item['name'] ?? 'Unknown',
+              productImage: imageUrl,
+              productPrice: item['sp']?.toString() ?? 'N/A',
+              productBrand: (item['brand'] is Map)
+                  ? item['brand']['name'] ?? 'Unknown'
+                  : 'Unknown',
+              productRating: rating,
+              ratingCount: (item['rating_count'] is num)
+                  ? (item['rating_count'] as num).toInt()
+                  : 0,
+            ));
+      },
+      child: Card(
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: ListTile(
+          contentPadding: EdgeInsets.all(10),
+          leading: Image.network(imageUrl, width: 60, height: 60),
+          title: Text(item['name'] ?? 'Unknown Item',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          subtitle: Text(
+              "Model: $model\nType: $type\nRating: ${rating.toStringAsFixed(1)}"),
+        ),
       ),
     );
   }

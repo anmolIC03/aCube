@@ -54,7 +54,7 @@ class CartCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      'Price: \$${item.price}',
+                      'Price: \₹${item.price}',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey.shade700,

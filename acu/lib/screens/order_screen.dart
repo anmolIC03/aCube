@@ -169,12 +169,14 @@ class _OrderConfirmScreenState extends State<OrderConfirmScreen> {
                     // }
                     // Navigate to PaymentMethodsScreen with correct product details
                     Get.to(() => PaymentMethodsScreen(
-                          product: {
-                            "_id": widget.productId,
-                            "name": widget.productName,
-                            "image": widget.productImage,
-                            "price": widget.productPrice,
-                          },
+                          products: [
+                            {
+                              "_id": widget.productId,
+                              "name": widget.productName,
+                              "image": widget.productImage,
+                              "price": widget.productPrice,
+                            }
+                          ],
                           addressId: widget.addressId,
                           phone: widget.phone,
                           totalAmount: totalAmount.toInt(),
@@ -201,7 +203,6 @@ class _OrderConfirmScreenState extends State<OrderConfirmScreen> {
     );
   }
 
-  /// Helper widget to build price rows
   Widget buildPriceRow(String label, double value, {bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

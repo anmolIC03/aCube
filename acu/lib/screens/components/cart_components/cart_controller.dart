@@ -2,7 +2,6 @@ import 'package:acu/screens/components/cart_components/cart_item.dart';
 import 'package:get/get.dart';
 
 class CartController extends GetxController {
-  // Cart items map with observable properties
   var cartItems = <String, CartItem>{}.obs;
 
   void addItem(CartItem item) {
@@ -34,5 +33,10 @@ class CartController extends GetxController {
     return cartItems.values
         .map((item) => item.quantity)
         .fold(0, (prev, current) => prev + current);
+  }
+
+  double calculateTotalPrice() {
+    return cartItems.values
+        .fold(0.0, (sum, item) => sum + item.price * item.quantity);
   }
 }

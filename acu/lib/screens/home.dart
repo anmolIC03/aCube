@@ -8,8 +8,10 @@ import 'package:acu/screens/components/category_list.dart';
 import 'package:acu/screens/components/home_controller.dart';
 import 'package:acu/screens/components/products/rating_list.dart';
 import 'package:acu/screens/components/wishlist_controller.dart';
+import 'package:acu/screens/prodByCategory.dart';
 import 'package:acu/screens/prod_details.dart';
 import 'package:acu/screens/wishlist.dart';
+import 'package:acu/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
@@ -27,6 +29,85 @@ class _HomeScreenState extends State<HomeScreen> {
   final HomeController homeController = Get.put(HomeController());
 
   int selectedIndex = 0;
+  var elements = <Map<String, String>>[].obs; // Ensure correct type
+  var isLoading = false.obs;
+  var searchQuery = ''.obs;
+  var filteredProducts = <dynamic>[].obs;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchElements();
+
+    ever(homeController.productList, (_) {
+      filteredProducts.assignAll(homeController.productList);
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      filteredProducts.assignAll(homeController.productList);
+    });
+  }
+
+  void filterProducts() {
+    if (searchQuery.value.isEmpty) {
+      filteredProducts.assignAll(homeController.productList);
+    } else {
+      filteredProducts.assignAll(homeController.productList.where((product) {
+        return product.name
+            .toLowerCase()
+            .contains(searchQuery.value.toLowerCase());
+      }).toList());
+    }
+  }
+
+  void navigateToProductsScreen(String? id, String? name) async {
+    if (id == null || name == null) {
+      print("Error: Category ID or Name is null");
+      return;
+    }
+
+    // Fetch all products from API
+    var response = await CategoryApiService.get('/product/all');
+
+    if (response is Map<String, dynamic> && response.containsKey('data')) {
+      List<dynamic> allProducts = response['data'];
+
+      // Filter products that belong to the selected element
+      List<dynamic> filtered = allProducts.where((product) {
+        if (product['element'] is List) {
+          return product['element'].any((e) => e['_id'] == id);
+        }
+        return false;
+      }).toList();
+
+      Get.to(
+        () => ProductsScreen(
+          title: name,
+          id: id,
+          isType: false,
+        ),
+        arguments: filtered,
+      );
+    }
+  }
+
+  Future<void> fetchElements() async {
+    var response = await CategoryApiService.get('/element/all');
+    if (!mounted) return;
+
+    if (response is Map<String, dynamic> && response.containsKey('data')) {
+      List<dynamic> elementList = response['data'];
+      if (elementList.isNotEmpty) {
+        elements.value = elementList
+            .map((element) => {
+                  'id': element['_id'].toString(),
+                  'name': element['name'].toString(),
+                })
+            .toList();
+      }
+    }
+    isLoading.value = false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +132,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: TextField(
+                    onChanged: (value) {
+                      searchQuery.value = value;
+                      filterProducts();
+                    },
                     decoration: InputDecoration(
                       hintText: 'Search any Product...',
                       prefixIcon: Icon(Icons.search),
@@ -121,38 +206,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
                 Container(
-                  height: 50,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      CategoryCard(
-                        icon: Icons.pedal_bike,
-                        label: 'Bikes',
-                        onTap: () {},
-                      ),
-                      CategoryCard(
-                        icon: Icons.car_rental,
-                        label: 'Cars',
-                        onTap: () {},
-                      ),
-                      CategoryCard(
-                        icon: Icons.chair,
-                        label: 'Riding Gears',
-                        onTap: () {},
-                      ),
-                      CategoryCard(
-                        icon: Icons.electrical_services,
-                        label: 'Goggles',
-                        onTap: () {},
-                      ),
-                      CategoryCard(
-                        icon: Icons.kitchen,
-                        label: 'Accessories',
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
-                ),
+                    height: 50,
+                    child: Obx(() {
+                      if (isLoading.value) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+                      if (elements.isEmpty) {
+                        return Center(child: const Text("No Categories Found"));
+                      }
+                      return ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: elements.length > 5 ? 5 : elements.length,
+                          itemBuilder: (context, index) {
+                            final category = elements[index];
+
+                            return CategoryCard(
+                                icon: Icons.category,
+                                label: category['name'] ?? 'Unknown',
+                                onTap: () {
+                                  String? id = category['id'];
+                                  String? name = category['name'];
+
+                                  navigateToProductsScreen(id, name);
+
+                                  print(
+                                      "Selected Category : ${category['name']}");
+                                });
+                          });
+                    })),
 
                 SizedBox(height: 20),
 
@@ -184,9 +267,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 390,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
-                          itemCount: homeController.productList.length,
+                          itemCount: filteredProducts.length,
                           itemBuilder: (context, index) {
-                            final product = homeController.productList[index];
+                            final product = filteredProducts[index];
                             return Padding(
                               padding: const EdgeInsets.only(right: 22.0),
                               child: GestureDetector(
@@ -549,6 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       onPressed: () {
                         CartItem cartItem = CartItem(
+                          productId: product.id,
                           name: product.name,
                           price: product.sp,
                           quantity: 1,

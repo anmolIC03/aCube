@@ -3,6 +3,7 @@ import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/cart_components/cart_item.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:acu/screens/checkOutCart.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -45,27 +46,95 @@ class _CartPageState extends State<CartPage> {
           icon: Icon(Icons.arrow_back_ios_new, size: 28),
         ),
       ),
-      body: Obx(() {
-        print("Cart Items: ${cartController.cartItems}");
-        return cartController.cartItems.isEmpty
-            ? Center(
-                child: Text(
-                  'Your cart is empty!',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                ),
-              )
-            : ListView.builder(
-                itemCount: cartController.cartItems.length,
-                itemBuilder: (context, index) {
-                  final item = cartController.cartItems.values.toList()[index];
-                  return CartCard(
-                    item: item,
-                    cartController: cartController,
-                    updateItemCount: updateItemCount,
+      body: Column(
+        children: [
+          Expanded(
+            child: Obx(() {
+              return cartController.cartItems.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Your cart is empty!',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w500),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: cartController.cartItems.length,
+                      itemBuilder: (context, index) {
+                        final item =
+                            cartController.cartItems.values.toList()[index];
+                        return CartCard(
+                          item: item,
+                          cartController: cartController,
+                          updateItemCount: updateItemCount,
+                        );
+                      },
+                    );
+            }),
+          ),
+          Obx(() {
+            double totalAmount = cartController.cartItems.values
+                .fold(0, (sum, item) => sum + (item.price * item.quantity));
+
+            return cartController.cartItems.isEmpty
+                ? SizedBox.shrink()
+                : Container(
+                    padding: EdgeInsets.symmetric(vertical: 25, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(12)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total: ₹${totalAmount.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '${cartController.cartItems.length} items',
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            List<CartItem> cartItems =
+                                cartController.cartItems.values.toList();
+                            Get.to(() => CheckOutCart(cartItems: cartItems));
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromRGBO(185, 28, 28, 1.0),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                          ),
+                          child: Text(
+                            'Place Order',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
                   );
-                },
-              );
-      }),
+          }),
+        ],
+      ),
     );
   }
 }

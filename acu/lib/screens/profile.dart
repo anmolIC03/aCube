@@ -32,13 +32,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
     fetchProfileData();
   }
 
+  Future<void> saveProfile() async {
+    final userId = GetStorage().read("userId");
+    if (userId == null) {
+      print("User ID not found");
+      return;
+    }
+
+    final headers = {"Content-Type": "application/json"};
+    final body = jsonEncode({
+      "user": userId,
+      "street": _addressController.text.trim(),
+      "pincode": _pincodeController.text.trim(),
+      "city": _cityController.text.trim(),
+      "state": _stateController.text.trim(),
+      "country": _countryController.text.trim(),
+    });
+
+    final Uri url = addressId != null
+        ? Uri.parse(
+            "https://backend.acubemart.in/api/address/update/$addressId") // Update existing address
+        : Uri.parse(
+            "https://backend.acubemart.in/api/address/add"); // Add new address
+
+    try {
+      final response = addressId != null
+          ? await http.patch(url,
+              headers: headers, body: body) // Update address
+          : await http.post(url, headers: headers, body: body); // Add address
+
+      print("Response: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print("Address saved successfully!");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Address saved successfully!")),
+        );
+        fetchProfileData(); // Refresh the profile data
+      } else {
+        print("Failed to save address: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to save address!")),
+        );
+      }
+    } catch (e) {
+      print("Error saving address: $e");
+    }
+  }
+
+  String? addressId;
+
   Future<void> fetchProfileData() async {
     final userId = GetStorage().read("userId");
     if (userId == null) {
       print("User ID not found");
       return;
     }
-    print(userId);
+
     final url = Uri.parse("https://backend.acubemart.in/api/user/$userId");
 
     try {
@@ -48,21 +98,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (response.statusCode == 200) {
         final responseBody = jsonDecode(response.body);
 
-        if (responseBody["data"] != null && responseBody["data"].isNotEmpty) {
-          final data = responseBody["data"];
+        if (responseBody["success"] == true && responseBody["data"] is Map) {
+          final user = responseBody["data"];
+
+          final List<dynamic> addressList = user["address"] ?? [];
 
           setState(() {
-            _emailController.text = data["email"] ?? "";
-            if (data["address"].isNotEmpty) {
-              _addressController.text = data["address"][0]["street"] ?? "";
-              _pincodeController.text = data["address"][0]["pincode"] ?? "";
-              _cityController.text = data["address"][0]["city"] ?? "";
-              _stateController.text = data["address"][0]["state"] ?? "";
-              _countryController.text = data["address"][0]["country"] ?? "";
+            _emailController.text = user["email"] ?? "";
+
+            if (addressList.isNotEmpty) {
+              final address = addressList.first;
+
+              addressId = address["_id"];
+              _addressController.text = address["street"] ?? "";
+              _pincodeController.text = address["pincode"] ?? "";
+              _cityController.text = address["city"] ?? "";
+              _stateController.text = address["state"] ?? "";
+              _countryController.text = address["country"] ?? "";
             }
           });
         } else {
-          print("No user data found");
+          print("Invalid response structure.");
         }
       } else {
         print("Failed to fetch profile: ${response.body}");
@@ -161,6 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
+                          saveProfile();
                           print('Saved Changes');
                         },
                         style: ElevatedButton.styleFrom(

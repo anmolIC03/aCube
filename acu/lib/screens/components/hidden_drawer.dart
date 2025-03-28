@@ -3,6 +3,7 @@ import 'package:acu/screens/help.dart';
 import 'package:acu/screens/home.dart';
 import 'package:acu/screens/login_page.dart';
 import 'package:acu/screens/profile.dart';
+import 'package:acu/screens/view_all.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -20,6 +21,7 @@ class HiddenDrawer extends StatefulWidget {
 class _HiddenDrawerState extends State<HiddenDrawer> {
   List<ScreenHiddenDrawer> _pages = [];
   final storage = GetStorage(); // GetStorage instance
+  int _currentIndex = 0;
 
   final myTextStyle = TextStyle(
     fontSize: 18,
@@ -43,7 +45,7 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
       ),
       ScreenHiddenDrawer(
         ItemHiddenMenu(
-          name: 'Exhausts',
+          name: 'By Performance',
           baseStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           selectedStyle: myTextStyle,
           colorLineSelected: Color.fromRGBO(185, 28, 28, 1.0),
@@ -66,7 +68,9 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
           selectedStyle: myTextStyle,
           colorLineSelected: Color.fromRGBO(185, 28, 28, 1.0),
         ),
-        HomeScreen(),
+        ViewAllScreen(
+          fromDrawer: true,
+        ),
       ),
       // Logout option
       ScreenHiddenDrawer(
