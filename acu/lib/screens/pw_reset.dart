@@ -19,8 +19,7 @@ class _ResetPasswordScreenState extends State<ResetPwScreen> {
       setState(() {
         _isProcessing = false;
       });
-      // Here, you can call your backend to send the reset email.
-      // For now, we show a success message.
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Reset link sent to ${_emailController.text}')),
       );

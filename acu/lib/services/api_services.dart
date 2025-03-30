@@ -177,4 +177,50 @@ class CategoryApiService {
 
     return [];
   }
+
+  static Future<List<Map<String, dynamic>>> fetchElementsByCategoryId(
+      String categoryId) async {
+    final String url = "$baseUrl/element/all"; // Fetch all elements
+    print("Fetching elements from: $url");
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      print("Response Status Code: ${response.statusCode}");
+      print("Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+
+        if (jsonData.containsKey('data') && jsonData['data'] is List) {
+          // ✅ Filter elements by categoryId
+          List<Map<String, dynamic>> elements = (jsonData['data'] as List)
+              .where((item) =>
+                  item["categoryId"]?["_id"] == categoryId) // ✅ Filter
+              .map((item) => {
+                    "id": item["_id"]?.toString() ?? "",
+                    "name": item["name"]?.toString() ?? "",
+                    "image": item["mediaId"]?["url"]?.toString() ?? "",
+                    "categoryId": item["categoryId"]?["_id"]?.toString() ?? "",
+                    "categoryName":
+                        item["categoryId"]?["name"]?.toString() ?? ""
+                  })
+              .toList();
+
+          print(
+              "Filtered ${elements.length} elements for category $categoryId");
+          return elements;
+        } else {
+          print("Unexpected API response format: ${response.body}");
+          return [];
+        }
+      } else {
+        print("Error: ${response.body}");
+        return [];
+      }
+    } catch (e) {
+      print("API request failed: $e");
+      return [];
+    }
+  }
 }

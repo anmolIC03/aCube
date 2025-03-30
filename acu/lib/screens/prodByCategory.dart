@@ -128,10 +128,10 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final String productId = product['_id'];
     final String productName = product['name'] ?? 'Unknown Product';
-    final String productImage =
-        (product['image'] != null && product['image'].isNotEmpty)
-            ? product['image'][0]['url']
-            : 'https://via.placeholder.com/150';
+    final List<String> productImages = (product['image'] != null &&
+            product['image'] is List)
+        ? product['image'].map<String>((img) => img['url'].toString()).toList()
+        : ['https://via.placeholder.com/150'];
     final double productPrice =
         double.tryParse(product['sp'].toString()) ?? 0.0;
     final String productBrand =
@@ -144,7 +144,7 @@ class ProductCard extends StatelessWidget {
         Get.to(() => ProductDetails(
               productId: productId,
               productName: productName,
-              productImage: productImage,
+              productImages: productImages,
               productPrice: productPrice.toString(),
               productBrand: productBrand,
               productRating: 0.0,
@@ -154,7 +154,7 @@ class ProductCard extends StatelessWidget {
       child: Card(
         margin: EdgeInsets.all(6),
         child: ListTile(
-          leading: Image.network(productImage, width: 80, height: 100),
+          leading: Image.network(productImages.first, width: 80, height: 100),
           title:
               Text(productName, maxLines: 2, overflow: TextOverflow.ellipsis),
           subtitle: Text("₹${productPrice.toStringAsFixed(2)}"),

@@ -1,19 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:acu/screens/view_all.dart';
-import 'package:acu/services/api_services.dart';
 import 'package:get/get.dart';
+import 'package:acu/services/api_services.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:acu/screens/productByType.dart';
 
 class CategoryListSection extends StatefulWidget {
   @override
   _CategoryListSectionState createState() => _CategoryListSectionState();
 }
 
-class _CategoryListSectionState extends State<CategoryListSection> {
+class _CategoryListSectionState extends State<CategoryListSection>
+    with SingleTickerProviderStateMixin {
   late Future<List<String>> futureCategories;
   String selectedCategory = '';
   String selectedCategoryId = '';
   List<Map<String, String>> categoryList = [];
   late Future<List<dynamic>> futureProducts;
+
+  // Variables for Model Tabs
+  late TabController _tabController;
+  List<dynamic> carModels = [];
+  List<dynamic> bikeModels = [];
+  bool isModelLoading = true;
 
   @override
   void initState() {
@@ -27,254 +36,170 @@ class _CategoryListSectionState extends State<CategoryListSection> {
       }
       return categories.map((e) => e["name"]!).toList();
     });
+
+    _tabController = TabController(length: 2, vsync: this);
+    fetchModels();
   }
 
   Future<List<dynamic>> fetchProducts(String categoryId) async {
-    print("🔵 Fetching products for category: $categoryId");
-    List<dynamic> products =
-        await CategoryApiService.fetchProductsByCategoryId(categoryId, 1, 20);
-    print("🟢 Received ${products.length} products for category $categoryId:");
-    for (var product in products) {
-      print("   ➜ Product ID: ${product['_id']}, Name: ${product['name']}");
+    return await CategoryApiService.fetchProductsByCategoryId(
+        categoryId, 1, 20);
+  }
+
+  Future<void> fetchModels() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://backend.acubemart.in/api/model/all'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          List<dynamic> allModels = data['data'];
+
+          // Separate models into Car and Bike lists & limit to 5 models each
+          carModels = allModels
+              .where((model) => model['typeId']['name'] == 'Car')
+              .take(5)
+              .toList();
+          bikeModels = allModels
+              .where((model) => model['typeId']['name'] == 'Bike')
+              .take(5)
+              .toList();
+        }
+      }
+    } catch (e) {
+      print("Error fetching models: $e");
     }
-    return products;
+
+    if (mounted) {
+      setState(() {
+        isModelLoading = false;
+      });
+    }
+  }
+
+  void navigateToProducts(String modelId, String modelName) {
+    Get.to(() => ProductListScreen(modelId: modelId, modelName: modelName));
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<String>>(
-      future: futureCategories,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(child: Text("No categories found"));
-        } else {
-          List<String> categories = snapshot.data!;
-          if (selectedCategory.isEmpty) {
-            selectedCategory = categories[0];
-          }
-          return buildCategoryList(categories);
-        }
-      },
+    return Column(
+      children: [
+        buildRefinedByModelsHeader(),
+        SizedBox(height: 8),
+        buildModelTabs(),
+      ],
     );
   }
 
-  Widget buildCategoryList(List<String> categories) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.black.withOpacity(0.8), Colors.black],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+  Widget buildRefinedByModelsHeader() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.black.withOpacity(0.8), Colors.black],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      padding: EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'REFINED BY MODELS',
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.to(TypeAndModel());
+            },
+            child: Text(
+              'View All',
+              style: TextStyle(
+                  color: Color.fromRGBO(185, 28, 28, 1.0),
+                  fontWeight: FontWeight.bold),
             ),
           ),
-          padding: EdgeInsets.all(16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'REFINED BY MODELS',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
-              ),
-              TextButton(
-                onPressed: () {
-                  Get.to(ViewAllScreen());
-                },
-                child: Text(
-                  'View All',
-                  style: TextStyle(
-                      color: Color.fromRGBO(185, 28, 28, 1.0),
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: categories.take(5).map((category) {
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: 5),
-                child: TextButton(
-                  onPressed: () {
-                    setState(() {
-                      selectedCategory = category;
-                      selectedCategoryId = categoryList.firstWhere(
-                          (element) => element['name'] == category)['id']!;
-                      print(" Selected Category: $selectedCategory");
-                      print(" Selected Category ID: $selectedCategoryId");
-                      futureProducts = fetchProducts(selectedCategoryId);
-                    });
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: selectedCategory == category
-                        ? Color.fromRGBO(185, 28, 28, 1.0)
-                        : Colors.black,
-                  ),
-                  child: Text(
-                    category,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      decoration: selectedCategory == category
-                          ? TextDecoration.underline
-                          : null,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        SizedBox(height: 16),
-        SizedBox(
-          height: 300,
-          child: FutureBuilder<List<dynamic>>(
-            key: ValueKey(selectedCategoryId),
-            future: futureProducts,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Center(child: Text("Error loading products"));
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Center(child: Text("No products found"));
-              }
-              List<dynamic> products = snapshot.data!;
-              print(
-                  "✅ UI is displaying ${products.length} products for category: $selectedCategoryId");
+        ],
+      ),
+    );
+  }
 
-              List<dynamic> limitedProducts = products.take(2).toList();
-              return SizedBox(
-                height: 250,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  scrollDirection: Axis.vertical,
-                  itemCount: limitedProducts.length,
-                  itemBuilder: (context, index) {
-                    var item = limitedProducts[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10.0),
-                      child: _buildItemCard(
-                        imageUrl:
-                            (item['image'] is List && item['image'].isNotEmpty)
-                                ? item['image'][0]['url']
-                                : 'https://via.placeholder.com/150',
-                        name: item['name'] ?? 'Unknown Item',
-                        model:
-                            (item['model'] is List && item['model'].isNotEmpty)
-                                ? item['model'].map((m) => m['name']).join(", ")
-                                : (item['model']?['name'] ?? 'Unknown Model'),
-                        type: (item['type'] is List && item['type'].isNotEmpty)
-                            ? item['type'].map((t) => t['name']).join(", ")
-                            : (item['type']?['name'] ?? 'Unknown Type'),
-                        rating: item['rating']?.toString() ?? 'N/A',
-                      ),
-                    );
-                  },
+  Widget buildModelTabs() {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: "Cars"),
+            Tab(text: "Bikes"),
+          ],
+          labelColor: Colors.black,
+          indicatorColor: Color.fromRGBO(185, 28, 28, 1.0),
+        ),
+        SizedBox(height: 8),
+        Container(
+          height: 300, // Adjust height for better layout
+          child: isModelLoading
+              ? Center(child: CircularProgressIndicator())
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    buildModelList(carModels),
+                    buildModelList(bikeModels),
+                  ],
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
   }
 
-  Widget _buildItemCard({
-    required String imageUrl,
-    required String name,
-    required String model,
-    required String type,
-    required String rating,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 10),
-      child: Container(
-        width: 160,
-        height: 150,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              blurRadius: 5,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Container(
-                height: 80,
-                width: 80,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  image: DecorationImage(
-                    image: NetworkImage(imageUrl),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+  Widget buildModelList(List<dynamic> models) {
+    if (models.isEmpty) {
+      return Center(child: Text("No models available"));
+    }
+    return ListView.builder(
+      itemCount: models.length,
+      itemBuilder: (context, index) {
+        var model = models[index];
+        return GestureDetector(
+          onTap: () => navigateToProducts(model['_id'], model['name']),
+          child: Card(
+            elevation: 3,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: ListTile(
+              leading: model['mediaId'] != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        model['mediaId']['url'],
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.scaleDown,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Icon(Icons.image_not_supported, size: 50),
+                      ),
+                    )
+                  : Icon(Icons.image_not_supported, size: 50),
+              title: Text(
+                model['name'],
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(left: 8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      name,
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      model,
-                      style: TextStyle(fontSize: 16, color: Colors.black),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      type,
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
-                    ),
-                    SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.star, size: 22, color: Colors.yellow),
-                        SizedBox(width: 4),
-                        Text(
-                          rating,
-                          style: TextStyle(fontSize: 16, color: Colors.black54),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              subtitle: Text(
+                model['brandId']['name'],
+                style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
+              trailing:
+                  Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

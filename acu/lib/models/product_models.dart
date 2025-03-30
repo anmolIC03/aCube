@@ -4,7 +4,7 @@ class Product {
   double price;
   String description;
   int stock;
-  String imageUrl;
+  List<String> images;
   String category;
   String brand;
   String model;
@@ -21,7 +21,7 @@ class Product {
     required this.price,
     required this.description,
     required this.stock,
-    required this.imageUrl,
+    required this.images,
     required this.category,
     required this.brand,
     required this.model,
@@ -42,7 +42,10 @@ class Product {
           : 0.0,
       description: json['description'] ?? '',
       stock: json['stock'] ?? 0,
-      imageUrl: json['featuredImage']?['url'] ?? '',
+      images: (json['image'] != null && json['image'] is List)
+          ? List<String>.from(
+              json['image'].map((img) => img['url']).whereType<String>())
+          : [],
       category: json['category']?.isNotEmpty == true
           ? json['category'][0]['name']
           : 'Unknown Category',

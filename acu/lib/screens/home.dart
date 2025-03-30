@@ -1,5 +1,5 @@
 import 'package:acu/models/product_models.dart';
-import 'package:acu/screens/all_categories.dart';
+import 'package:acu/screens/productByType.dart';
 import 'package:acu/screens/cart_page.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/cart_components/cart_item.dart';
@@ -10,6 +10,7 @@ import 'package:acu/screens/components/products/rating_list.dart';
 import 'package:acu/screens/components/wishlist_controller.dart';
 import 'package:acu/screens/prodByCategory.dart';
 import 'package:acu/screens/prod_details.dart';
+import 'package:acu/screens/view_all.dart';
 import 'package:acu/screens/wishlist.dart';
 import 'package:acu/services/api_services.dart';
 import 'package:flutter/material.dart';
@@ -194,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       TextButton(
                         onPressed: () {
-                          Get.to(() => ViewAllCategoriesScreen());
+                          Get.to(() => ViewAllScreen());
                         },
                         child: Text(
                           'VIEW ALL',
@@ -277,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Get.to(() => ProductDetails(
                                         productId: product.id,
                                         productName: product.name,
-                                        productImage: product.imageUrl,
+                                        productImages: product.images,
                                         productPrice: product.sp.toString(),
                                         productBrand: product.brand,
                                         productRating: product.rating,
@@ -337,12 +338,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           RichText(
                             text: const TextSpan(
-                              text: 'GET 15% OFF*', // Custom text
+                              text: 'GET 15% OFF*',
                               style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
-                                color: Color.fromRGBO(
-                                    185, 28, 28, 1.0), // Your custom color
+                                color: Color.fromRGBO(185, 28, 28, 1.0),
                               ),
                             ),
                           ),
@@ -546,7 +546,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                   image: DecorationImage(
-                    image: NetworkImage(product.imageUrl),
+                    image: NetworkImage(product.images.isNotEmpty
+                        ? product.images.first
+                        : 'https://via.placeholder.com/150'),
                     fit: BoxFit.fill,
                   ),
                 ),
@@ -573,7 +575,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             name: product.name,
                             price: product.sp,
                             quantity: 1,
-                            image: product.imageUrl,
+                            image: product.images.isNotEmpty
+                                ? product.images.first
+                                : 'https://via.placeholder.com/150',
                             brand: product.brand,
                             rating: product.rating,
                           ),
@@ -636,7 +640,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           name: product.name,
                           price: product.sp,
                           quantity: 1,
-                          image: product.imageUrl,
+                          image: product.images.isNotEmpty
+                              ? product.images.first
+                              : 'https://via.placeholder.com/150',
                           brand: product.brand,
                           rating: product.rating,
                         );

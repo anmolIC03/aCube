@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:carousel_slider/carousel_options.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:acu/screens/check_out.dart';
@@ -12,7 +14,7 @@ import 'package:get/get.dart';
 class ProductDetails extends StatefulWidget {
   final String productId;
   final String productName;
-  final String productImage;
+  final List<String> productImages;
   final String productPrice;
   final String productBrand;
   final double productRating;
@@ -21,7 +23,7 @@ class ProductDetails extends StatefulWidget {
   const ProductDetails({
     Key? key,
     required this.productName,
-    required this.productImage,
+    required this.productImages,
     required this.productPrice,
     required this.productBrand,
     required this.productRating,
@@ -43,34 +45,59 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   final TextEditingController _emailController = TextEditingController();
 
+  int _currentImageIndex = 0;
+
   Future<void> navigateToCheckout() async {
     setState(() {
       isLoading = true;
     });
+
     try {
       final response = await http
           .get(Uri.parse("https://backend.acubemart.in/api/product/all"));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final Map<String, dynamic> data = jsonDecode(response.body);
 
-        double deliveryCharges =
-            double.tryParse(data['deliveryCharges'].toString()) ?? 0.0;
-        double codCharges =
-            double.tryParse(data['codCharges'].toString()) ?? 0.0;
-        print("Navigating to CheckoutScreen...");
-        Get.to(() => CheckoutScreen(
-              productId: widget.productId,
-              productName: widget.productName,
-              productImage: widget.productImage,
-              productPrice: double.tryParse(widget.productPrice) ?? 0.0,
-              productRating: widget.productRating,
-              deliveryCharges: deliveryCharges,
-              codCharges: codCharges,
-            ));
-        print("Navigation command executed.");
+        print("Full API Response: $data"); // Debugging: Print entire response
+
+        // Extract products list
+        if (data.containsKey('data') && data['data'] is List) {
+          // Find the specific product matching widget.productId
+          final product = data['data'].firstWhere(
+            (prod) => prod['_id'] == widget.productId,
+            orElse: () => null,
+          );
+
+          if (product != null) {
+            double deliveryCharges =
+                double.tryParse(product['deliveryCharges'].toString()) ?? 0.0;
+            double codCharges =
+                double.tryParse(product['codCharges'].toString()) ?? 0.0;
+
+            print("Extracted deliveryCharges: $deliveryCharges");
+            print("Extracted codCharges: $codCharges");
+
+            Get.to(() => CheckoutScreen(
+                  productId: widget.productId,
+                  productName: widget.productName,
+                  productImage: widget.productImages.isNotEmpty
+                      ? widget.productImages.first
+                      : 'https://via.placeholder.com/150',
+                  productPrice: double.tryParse(widget.productPrice) ?? 0.0,
+                  productRating: widget.productRating,
+                  deliveryCharges: deliveryCharges,
+                  codCharges: codCharges,
+                ));
+          } else {
+            print(
+                "Error: Product with ID ${widget.productId} not found in response.");
+          }
+        } else {
+          print("Error: 'data' array is missing or empty in response.");
+        }
       } else {
-        throw Exception("Failed to fetch charges");
+        print("Error: API returned status code ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching delivery/cod charges: $e");
@@ -122,14 +149,58 @@ class _ProductDetailsState extends State<ProductDetails> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Product Image
-                    Image.network(
-                      widget.productImage,
-                      width: double.infinity,
-                      height: 300,
-                      fit: BoxFit.cover,
+                    CarouselSlider(
+                      items: widget.productImages.map((imageUrl) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            imageUrl,
+                            width: double.infinity,
+                            height: 300,
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                      }).toList(),
+                      options: CarouselOptions(
+                        height: 300,
+                        autoPlay: true,
+                        enlargeCenterPage: true,
+                        onPageChanged: (index, reason) {
+                          setState(() {
+                            _currentImageIndex = index;
+                          });
+                        },
+                      ),
                     ),
+                    const SizedBox(height: 10),
+
+                    // Indicator Dots
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children:
+                          widget.productImages.asMap().entries.map((entry) {
+                        return GestureDetector(
+                          onTap: () => setState(() {
+                            _currentImageIndex = entry.key;
+                          }),
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentImageIndex == entry.key
+                                  ? Colors.redAccent
+                                  : Colors.grey,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+
                     SizedBox(height: 16),
 
+                    //Product Details
                     Text(
                       widget.productName,
                       style: TextStyle(
@@ -548,7 +619,9 @@ class _ProductDetailsState extends State<ProductDetails> {
                                   name: widget.productName,
                                   price: double.parse(widget.productPrice),
                                   quantity: 1,
-                                  image: widget.productImage,
+                                  image: widget.productImages.isNotEmpty
+                                      ? widget.productImages.first
+                                      : 'https://via.placeholder.com/150',
                                   brand: widget.productBrand,
                                   rating: widget.productRating,
                                 );

@@ -2,6 +2,7 @@ import 'package:acu/screens/prod_details.dart';
 import 'package:flutter/material.dart';
 import 'package:acu/services/api_services.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ViewAllScreen extends StatefulWidget {
   final bool fromDrawer;
@@ -13,14 +14,17 @@ class ViewAllScreen extends StatefulWidget {
 }
 
 class _ViewAllScreenState extends State<ViewAllScreen> {
-  List<Map<String, String>> categoryList = [];
-  String selectedCategoryId = '';
-
+  List<Map<String, dynamic>> categoryList = [];
+  List<Map<String, dynamic>> elementList = [];
   List<dynamic> products = [];
+
+  String selectedCategoryId = '';
+  String selectedElementId = '';
+
   bool isLoading = false;
   bool hasMore = true;
   int page = 1;
-  final int limit = 10; // Load 10 products per request
+  final int limit = 10;
   ScrollController scrollController = ScrollController();
 
   @override
@@ -28,7 +32,6 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
     super.initState();
     fetchCategories();
 
-    // 🔹 Add Scroll Listener for Lazy Loading
     scrollController.addListener(() {
       if (scrollController.position.pixels ==
               scrollController.position.maxScrollExtent &&
@@ -39,37 +42,81 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
     });
   }
 
-  /// 🔹 Fetch categories from the backend
   Future<void> fetchCategories() async {
-    List<Map<String, String>> categories =
+    List<Map<String, dynamic>> categories =
         await CategoryApiService.fetchCategories();
 
     setState(() {
       categoryList = categories;
       if (categoryList.isNotEmpty) {
-        selectedCategoryId = categoryList.first['id']!;
-        fetchProducts(); // Load initial products
+        selectedCategoryId = categoryList.first['id'];
+        fetchElements();
       }
     });
   }
 
-  /// 🔹 Fetch products with pagination (Lazy Loading)
+  Future<void> fetchElements() async {
+    if (!mounted) return;
+
+    setState(() {
+      isLoading = true;
+      elementList.clear();
+      products.clear();
+      page = 1;
+      hasMore = true;
+      selectedElementId = ''; // 🔹 No element selected initially
+    });
+
+    List<Map<String, dynamic>> elements =
+        await CategoryApiService.fetchElementsByCategoryId(selectedCategoryId);
+
+    if (!mounted) return;
+
+    setState(() {
+      elementList = elements;
+      isLoading = false;
+    });
+  }
+
   Future<void> fetchProducts() async {
-    if (isLoading || !hasMore) return;
+    if (!mounted || isLoading || !hasMore || selectedElementId.isEmpty) return;
 
     setState(() {
       isLoading = true;
     });
 
-    List<dynamic> newProducts =
-        await CategoryApiService.fetchProductsByCategoryId(
-            selectedCategoryId, page, limit);
+    var response = await CategoryApiService.get('/product/all');
+
+    List<dynamic> allProducts = [];
+
+    if (response is Map &&
+        response.containsKey('data') &&
+        response['data'] is List) {
+      allProducts = response['data'];
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+
+    List<dynamic> filteredProducts = allProducts.where((product) {
+      bool categoryMatch = product['category'] is List &&
+          product['category']
+              .any((cat) => cat['_id'].toString().trim() == selectedCategoryId);
+
+      bool elementMatch = product['element'] is List &&
+          product['element'].any(
+              (elem) => elem['_id'].toString().trim() == selectedElementId);
+
+      return categoryMatch && elementMatch;
+    }).toList();
+
+    if (!mounted) return;
 
     setState(() {
-      if (newProducts.length < limit) {
-        hasMore = false;
-      }
-      products.addAll(newProducts);
+      products = filteredProducts;
+      hasMore = filteredProducts.length >= limit;
       page++;
       isLoading = false;
     });
@@ -95,7 +142,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
             ),
       body: Column(
         children: [
-          /// 🔹 Category Selection Bar
+          /// 🔹 Categories (Horizontal Scroll)
           Container(
             height: 50,
             color: Colors.grey[100],
@@ -109,12 +156,10 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                         return GestureDetector(
                           onTap: () {
                             setState(() {
-                              selectedCategoryId = category['id']!;
+                              selectedCategoryId = category['id'];
                               products.clear();
-                              page = 1;
-                              hasMore = true;
                             });
-                            fetchProducts();
+                            fetchElements();
                           },
                           child: Container(
                             padding: EdgeInsets.symmetric(
@@ -131,7 +176,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                                   : null,
                             ),
                             child: Text(
-                              category['name']!,
+                              category['name'],
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 16,
@@ -148,23 +193,90 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                   ),
           ),
 
-          /// 🔹 Products List (Lazy Loading Enabled)
+          /// 🔹 Elements (GridView with 2 per row)
           Expanded(
-            child: products.isEmpty && !isLoading
-                ? Center(child: Text("No products found"))
-                : ListView.builder(
-                    controller: scrollController,
-                    itemCount: products.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index < products.length) {
-                        return _buildItemCard(products[index]);
-                      } else {
-                        return isLoading
-                            ? Center(child: CircularProgressIndicator())
-                            : SizedBox(); // Hide when no more products
-                      }
-                    },
-                  ),
+            flex: 0,
+            child: Container(
+              padding: EdgeInsets.all(6),
+              color: Colors.grey[200],
+              child: isLoading
+                  ? _buildShimmerGrid()
+                  : elementList.isEmpty
+                      ? Center(child: Text("No elements found"))
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: elementList.length,
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 9,
+                            childAspectRatio: 2.8,
+                          ),
+                          itemBuilder: (context, index) {
+                            var element = elementList[index];
+                            bool isSelected =
+                                selectedElementId == element['id'];
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedElementId = element['id'];
+                                  products.clear();
+                                  page = 1;
+                                  hasMore = true;
+                                });
+                                fetchProducts();
+                              },
+                              child: Container(
+                                alignment: Alignment.center,
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Color.fromRGBO(185, 28, 28, 1.0)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                      color: Color.fromRGBO(185, 28, 28, 1.0)),
+                                ),
+                                child: Text(
+                                  element['name'].toString().capitalize!,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Color.fromRGBO(185, 28, 28, 1.0),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+          ),
+
+          /// 🔹 Products (Below Elements Grid)
+          Expanded(
+            child: selectedElementId.isEmpty
+                ? Center(
+                    child: Text("Select a sub-category to view products"),
+                  )
+                : products.isEmpty && !isLoading
+                    ? Center(child: Text("No products found"))
+                    : ListView.builder(
+                        controller: scrollController,
+                        itemCount: products.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index < products.length) {
+                            return _buildItemCard(products[index]);
+                          } else {
+                            return isLoading
+                                ? Center(child: CircularProgressIndicator())
+                                : SizedBox();
+                          }
+                        },
+                      ),
           ),
         ],
       ),
@@ -173,52 +285,64 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
 
   /// 🔹 Product Card UI
   Widget _buildItemCard(Map<String, dynamic> item) {
-    String imageUrl = (item['image'] is List && item['image'].isNotEmpty)
-        ? item['image'][0]['url']
-        : 'https://via.placeholder.com/150';
+    List<String> productImages =
+        (item['image'] is List && item['image'].isNotEmpty)
+            ? item['image'].map<String>((img) => img['url'].toString()).toList()
+            : ['https://via.placeholder.com/150'];
 
-    String model = 'Unknown Model';
-    if (item['model'] is List && item['model'].isNotEmpty) {
-      model = item['model'][0]['name'] ?? 'Unknown Model';
-    }
-
-    String type = 'Unknown Type';
-    if (item['type'] is List && item['type'].isNotEmpty) {
-      type = item['type'].map((t) => t['name']).join(", ");
-    }
-
-    double rating =
-        (item['rating'] is num) ? (item['rating'] as num).toDouble() : 0.0;
+    String productBrand = (item['brand'] is List && item['brand'].isNotEmpty)
+        ? item['brand'].first['name'] ?? 'Unknown'
+        : 'Unknown';
 
     return GestureDetector(
       onTap: () {
         Get.to(() => ProductDetails(
-              productId: item['_id'],
-              productName: item['name'] ?? 'Unknown',
-              productImage: imageUrl,
-              productPrice: item['sp']?.toString() ?? 'N/A',
-              productBrand: (item['brand'] is Map)
-                  ? item['brand']['name'] ?? 'Unknown'
-                  : 'Unknown',
-              productRating: rating,
-              ratingCount: (item['rating_count'] is num)
-                  ? (item['rating_count'] as num).toInt()
-                  : 0,
-            ));
+            productName: item['name'],
+            productImages: productImages,
+            productPrice: item['sp']?.toString() ?? '0',
+            productBrand: productBrand,
+            productRating: item['rating']?.toDouble() ?? 0.0,
+            ratingCount: item['ratingCount'] ?? 0,
+            productId: item['_id']));
       },
       child: Card(
         margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         elevation: 3,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: ListTile(
-          contentPadding: EdgeInsets.all(10),
-          leading: Image.network(imageUrl, width: 60, height: 60),
-          title: Text(item['name'] ?? 'Unknown Item',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          subtitle: Text(
-              "Model: $model\nType: $type\nRating: ${rating.toStringAsFixed(1)}"),
+          leading:
+              Image.network(item['image'][0]['url'], width: 60, height: 80),
+          title: Text(item['name']),
+          subtitle: Text("₹${item['sp']}"),
         ),
       ),
+    );
+  }
+
+  /// 🔹 Shimmer Loading for Elements Grid
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      itemCount: 6, // Show 6 placeholders
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 9,
+        childAspectRatio: 2.8,
+      ),
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+        );
+      },
     );
   }
 }
