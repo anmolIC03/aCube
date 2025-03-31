@@ -19,12 +19,12 @@ class _CartPageState extends State<CartPage> {
   void initState() {
     super.initState();
     updateItemCount();
+    Get.find<CartController>().fetchCart();
   }
 
-  // Update the total item count
   void updateItemCount() {
     setState(() {
-      itemCount = Get.find<CartController>().calculateItemCount();
+      itemCount = Get.find<CartController>().itemCount;
     });
   }
 
@@ -61,8 +61,7 @@ class _CartPageState extends State<CartPage> {
                   : ListView.builder(
                       itemCount: cartController.cartItems.length,
                       itemBuilder: (context, index) {
-                        final item =
-                            cartController.cartItems.values.toList()[index];
+                        final item = cartController.cartItems[index];
                         return CartCard(
                           item: item,
                           cartController: cartController,
@@ -73,7 +72,7 @@ class _CartPageState extends State<CartPage> {
             }),
           ),
           Obx(() {
-            double totalAmount = cartController.cartItems.values
+            double totalAmount = cartController.cartItems
                 .fold(0, (sum, item) => sum + (item.price * item.quantity));
 
             return cartController.cartItems.isEmpty
@@ -104,7 +103,7 @@ class _CartPageState extends State<CartPage> {
                                   fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                             Text(
-                              '${cartController.cartItems.length} items',
+                              '${cartController.itemCount} items',
                               style:
                                   TextStyle(fontSize: 14, color: Colors.grey),
                             ),
@@ -113,7 +112,7 @@ class _CartPageState extends State<CartPage> {
                         ElevatedButton(
                           onPressed: () {
                             List<CartItem> cartItems =
-                                cartController.cartItems.values.toList();
+                                cartController.cartItems.toList();
                             Get.to(() => CheckOutCart(cartItems: cartItems));
                           },
                           style: ElevatedButton.styleFrom(

@@ -29,7 +29,7 @@ class CartCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
-                  item.image,
+                  item.images.first,
                   width: 150,
                   height: double.infinity,
                   fit: BoxFit.cover,
@@ -54,7 +54,7 @@ class CartCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      'Price: \₹${item.price}',
+                      'Price: ₹${item.price}',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey.shade700,
@@ -65,8 +65,13 @@ class CartCard extends StatelessWidget {
                       children: [
                         IconButton(
                           icon: Icon(Icons.remove_circle),
-                          onPressed: () {
-                            cartController.removeItem(item.name);
+                          onPressed: () async {
+                            if (item.quantity > 1) {
+                              await cartController.updateQuantity(
+                                  item.productId, item.quantity - 1);
+                            } else {
+                              await cartController.removeItem(item.productId);
+                            }
                             updateItemCount();
                           },
                         ),
@@ -79,9 +84,10 @@ class CartCard extends StatelessWidget {
                         ),
                         IconButton(
                           icon: Icon(Icons.add_circle),
-                          onPressed: () {
-                            cartController.addItem(item);
-                            updateItemCount();
+                          onPressed: () async {
+                            await cartController.updateQuantity(
+                                item.productId, item.quantity + 1);
+                            updateItemCount(); // ✅ Refresh UI
                           },
                         ),
                       ],

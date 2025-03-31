@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:carousel_slider/carousel_options.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:acu/screens/check_out.dart';
@@ -19,6 +20,7 @@ class ProductDetails extends StatefulWidget {
   final String productBrand;
   final double productRating;
   final int ratingCount;
+  final String productSp;
 
   const ProductDetails({
     Key? key,
@@ -29,6 +31,7 @@ class ProductDetails extends StatefulWidget {
     required this.productRating,
     required this.ratingCount,
     required this.productId,
+    required this.productSp,
   }) : super(key: key);
 
   @override
@@ -46,6 +49,43 @@ class _ProductDetailsState extends State<ProductDetails> {
   final TextEditingController _emailController = TextEditingController();
 
   int _currentImageIndex = 0;
+  String productDescription = "";
+
+  Future<void> fetchProductDetails() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await http
+          .get(Uri.parse("https://backend.acubemart.in/api/product/all"));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        if (data.containsKey('data') && data['data'] is List) {
+          final product = data['data'].firstWhere(
+            (prod) => prod['_id'] == widget.productId,
+            orElse: () => null,
+          );
+
+          if (product != null) {
+            setState(() {
+              productDescription =
+                  product['description'] ?? "No description available.";
+              print(productDescription);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print("Error fetching product description: $e");
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   Future<void> navigateToCheckout() async {
     setState(() {
@@ -59,7 +99,7 @@ class _ProductDetailsState extends State<ProductDetails> {
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
 
-        print("Full API Response: $data"); // Debugging: Print entire response
+        print("Full API Response: $data");
 
         // Extract products list
         if (data.containsKey('data') && data['data'] is List) {
@@ -109,6 +149,12 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    fetchProductDetails();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final CartController cartController = Get.find<CartController>();
 
@@ -131,15 +177,6 @@ class _ProductDetailsState extends State<ProductDetails> {
               size: 26,
             ),
           ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Icon(
-                Icons.favorite_border_outlined,
-                size: 26,
-              ),
-            )
-          ],
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -157,7 +194,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                             imageUrl,
                             width: double.infinity,
                             height: 300,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.scaleDown,
                           ),
                         );
                       }).toList(),
@@ -217,80 +254,50 @@ class _ProductDetailsState extends State<ProductDetails> {
                           'Brand: ${widget.productBrand}',
                           style: TextStyle(fontSize: 16, color: Colors.grey),
                         ),
-                        StarRating(
-                            rating: widget.productRating,
-                            ratingCount: widget.ratingCount),
                       ],
                     ),
 
                     SizedBox(height: 10),
 
+                    Text(
+                      '₹${widget.productPrice}', // MRP
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+
                     // Price
                     Text(
-                      'Price: \₹${widget.productPrice}',
+                      'Price: \₹${widget.productSp}',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.green,
                       ),
                     ),
-                    SizedBox(height: 16),
-
-                    Divider(
-                      color: Colors.grey,
-                      thickness: 1,
-                    ),
-                    SizedBox(height: 8),
-
-                    // Size Section
-                    Text(
-                      'SIZE',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    // Discount Percentage (Red Box)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${_calculateDiscount(widget.productPrice, widget.productSp)}% OFF',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    SizedBox(height: 5),
 
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: sizes.map((size) {
-                        final isSelected = size == selectedSize;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedSize = size; // Update the selected size
-                            });
-                          },
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.black
-                                  : Colors.grey.shade200, // Black if selected
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.black
-                                    : Colors.grey.shade400,
-                              ),
-                            ),
-                            child: Text(
-                              size,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.white : Colors.black,
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    SizedBox(height: 30),
+                    SizedBox(height: 16),
+
+                    // Size Section
 
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,17 +318,22 @@ class _ProductDetailsState extends State<ProductDetails> {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 8),
-                    Text('Shadow Navy/Army Green',
-                        style: TextStyle(fontSize: 18)),
-                    SizedBox(height: 16),
-                    Text(
-                      'This product is made with premium quality materials to ensure '
-                      'long-lasting performance and durability. Perfect for anyone '
-                      'looking for style, comfort, and reliability.',
-                      style: TextStyle(fontSize: 16, color: Colors.black),
-                    ),
-                    SizedBox(height: 24),
+                    isLoading
+                        ? Center(child: CircularProgressIndicator())
+                        : productDescription.isNotEmpty
+                            ? Html(
+                                data: productDescription,
+                                style: {
+                                  "p": Style(fontSize: FontSize(16)),
+                                  "b": Style(fontWeight: FontWeight.bold),
+                                  "i": Style(fontStyle: FontStyle.italic),
+                                },
+                              )
+                            : Text(
+                                "No description available.",
+                                style:
+                                    TextStyle(fontSize: 16, color: Colors.grey),
+                              ),
 
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -362,8 +374,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                         OutlinedButton(
                           onPressed: () {},
                           style: OutlinedButton.styleFrom(
-                            backgroundColor: Color.fromRGBO(
-                                251, 137, 4, 0.22), // RGBA background color
+                            backgroundColor: Color.fromRGBO(251, 137, 4, 0.22),
                             side: BorderSide(
                               color: Color.fromRGBO(251, 137, 4, 0.22),
                               width: 1.0,
@@ -428,125 +439,6 @@ class _ProductDetailsState extends State<ProductDetails> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Contact Details',
-                          style: TextStyle(
-                              fontSize: 26, fontWeight: FontWeight.w900),
-                        ),
-                        Text(
-                          'We will use these details to keep you informed about \nthis delivery.',
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade700,
-                              fontWeight: FontWeight.w700),
-                        ),
-                        SizedBox(height: 25),
-                        TextField(
-                          controller: _emailController,
-                          decoration: InputDecoration(
-                            labelText: 'Email Address',
-                            hintText: 'Enter your email',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        Text(
-                          'Shipping Address',
-                          style: TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.w900),
-                        ),
-                        SizedBox(height: 16),
-                        Container(
-                          padding: EdgeInsets.all(16),
-                          margin: EdgeInsets.only(bottom: 8),
-                          decoration: BoxDecoration(
-                            color: Color.fromRGBO(90, 97, 255, 0.06),
-                            border: Border.all(
-                                color: Color.fromRGBO(90, 97, 255, 0.25)),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Standard Delivery',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Enter your address to see when you’ll get your order',
-                                      style: TextStyle(
-                                          fontSize: 14, color: Colors.black),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Text(
-                                '\$6.00',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF5A61FF),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Color.fromRGBO(251, 137, 4, 0.22),
-                            border: Border.all(
-                                color: Color.fromRGBO(251, 137, 4, 0.4)),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Collect in store',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Pay now, collect in store',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                'Free',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 16),
                         // Checkboxes
                         Row(
                           children: [
@@ -615,21 +507,22 @@ class _ProductDetailsState extends State<ProductDetails> {
                           children: [
                             ElevatedButton(
                               onPressed: () {
-                                CartItem cartItem = CartItem(
-                                  name: widget.productName,
-                                  price: double.parse(widget.productPrice),
-                                  quantity: 1,
-                                  image: widget.productImages.isNotEmpty
-                                      ? widget.productImages.first
-                                      : 'https://via.placeholder.com/150',
-                                  brand: widget.productBrand,
-                                  rating: widget.productRating,
-                                );
-                                // String rating = double.parse(productRating).toString();
-                                String price = double.parse(widget.productPrice)
-                                    .toString();
-                                int quantity = 1;
-                                cartController.addItem(cartItem);
+                                // CartItem cartItem = CartItem(
+                                //   productId: widget.,
+                                //   name: widget.productName,
+                                //   price: double.parse(widget.productPrice),
+                                //   quantity: 1,
+                                //   image: widget.productImages.isNotEmpty
+                                //       ? widget.productImages.first
+                                //       : 'https://via.placeholder.com/150',
+                                //   brand: widget.productBrand,
+                                //   rating: widget.productRating,
+                                // );
+                                // // String rating = double.parse(productRating).toString();
+                                // String price = double.parse(widget.productPrice)
+                                //     .toString();
+                                // int quantity = 1;
+                                cartController.addItem(widget.productId);
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
@@ -650,16 +543,16 @@ class _ProductDetailsState extends State<ProductDetails> {
                             ),
                             SizedBox(height: 10),
                             ElevatedButton(
-                              onPressed: () {
-                                isLoading ? null : navigateToCheckout();
-                                // ScaffoldMessenger.of(context).showSnackBar(
-                                //   SnackBar(
-                                //       content: Text("Proceeding to Payment")),
-                                // );
-                              },
+                              onPressed: (isAddressSame && ageConsent)
+                                  ? () {
+                                      if (!isLoading) {
+                                        navigateToCheckout();
+                                      }
+                                    }
+                                  : null, // Disable button if conditions aren't met
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Color.fromRGBO(
-                                    185, 28, 28, 1.0), // Button color
+                                backgroundColor:
+                                    Color.fromRGBO(185, 28, 28, 1.0),
                                 padding: EdgeInsets.symmetric(
                                     horizontal: 20, vertical: 18),
                                 shape: RoundedRectangleBorder(
@@ -694,5 +587,12 @@ class _ProductDetailsState extends State<ProductDetails> {
             ),
           ),
         ));
+  }
+
+  int _calculateDiscount(String mrp, String sp) {
+    double mrpValue = double.tryParse(mrp) ?? 0;
+    double spValue = double.tryParse(sp) ?? 0;
+    if (mrpValue <= 0 || spValue <= 0 || spValue >= mrpValue) return 0;
+    return ((1 - (spValue / mrpValue)) * 100).round();
   }
 }

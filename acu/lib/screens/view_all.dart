@@ -30,6 +30,10 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
   @override
   void initState() {
     super.initState();
+    final args = Get.arguments;
+    if (args != null && args is Map<String, dynamic>) {
+      selectedCategoryId = args['selectedCategoryId'] ?? '';
+    }
     fetchCategories();
 
     scrollController.addListener(() {
@@ -299,10 +303,11 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
         Get.to(() => ProductDetails(
             productName: item['name'],
             productImages: productImages,
-            productPrice: item['sp']?.toString() ?? '0',
+            productPrice: item['price']?.toString() ?? '0',
             productBrand: productBrand,
             productRating: item['rating']?.toDouble() ?? 0.0,
             ratingCount: item['ratingCount'] ?? 0,
+            productSp: item['sp']?.toString() ?? '0',
             productId: item['_id']));
       },
       child: Card(

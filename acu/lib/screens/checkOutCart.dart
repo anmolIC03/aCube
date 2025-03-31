@@ -8,12 +8,18 @@ import 'package:get_storage/get_storage.dart';
 
 class CheckOutCart extends StatelessWidget {
   final List<CartItem> cartItems;
-  final storage = GetStorage(); // Local storage for user ID
+  final storage = GetStorage();
 
-  CheckOutCart({Key? key, required this.cartItems}) : super(key: key);
+  CheckOutCart({Key? key, required this.cartItems}) : super(key: key) {
+    fetchCharges();
+  }
 
+  /// **Get total price of products in the cart**
   double get totalProductPrice =>
       cartItems.fold(0, (sum, item) => sum + (item.price * item.quantity));
+
+  final RxDouble deliveryCharges = 0.0.obs;
+  final RxDouble codCharges = 0.0.obs;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +39,7 @@ class CheckOutCart extends StatelessWidget {
       ),
       body: Column(
         children: [
+          /// **Product List**
           Expanded(
             child: ListView.builder(
               itemCount: cartItems.length,
@@ -47,7 +54,7 @@ class CheckOutCart extends StatelessWidget {
                     leading: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
-                          item.image,
+                          item.images.first,
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
@@ -73,50 +80,190 @@ class CheckOutCart extends StatelessWidget {
               },
             ),
           ),
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total: ₹${totalProductPrice.toStringAsFixed(2)}',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () async {
-                        await checkAddressAndProceed();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        backgroundColor: Color.fromRGBO(185, 28, 28, 1.0),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                      ),
-                      child: Text(
-                        'Proceed',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
+
+          /// **Bottom Section - Total Price & Proceed Button**
+          Obx(() {
+            if (deliveryCharges.value == 0.0 && codCharges.value == 0.0) {
+              return Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: CircularProgressIndicator(),
                 ),
-              ],
-            ),
-          ),
+              );
+            }
+
+            double totalAmount =
+                totalProductPrice + deliveryCharges.value + codCharges.value;
+
+            return Container(
+              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(color: Colors.grey.shade300, blurRadius: 5)
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  /// **Total Price + View Details**
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total: ₹${totalAmount.toStringAsFixed(2)}',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      TextButton(
+                        onPressed: () => showDetailsBottomSheet(context),
+                        child: Text(
+                          "View Details",
+                          style: TextStyle(
+                              color: Colors.blue,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  /// **Proceed Button**
+                  ElevatedButton(
+                    onPressed: () async {
+                      await checkAddressAndProceed(totalAmount);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      backgroundColor: Color.fromRGBO(185, 28, 28, 1.0),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                    ),
+                    child: Text(
+                      'Proceed',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          })
         ],
       ),
     );
   }
 
-  Future<void> checkAddressAndProceed() async {
+  /// **Show Order Summary**
+  void showDetailsBottomSheet(BuildContext context) {
+    Get.bottomSheet(
+      Obx(() {
+        double totalAmount =
+            totalProductPrice + deliveryCharges.value + codCharges.value;
+
+        return Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Order Summary",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              Divider(),
+              ListTile(
+                title: Text("Subtotal"),
+                trailing: Text("₹${totalProductPrice.toStringAsFixed(2)}"),
+              ),
+              ListTile(
+                title: Text("Delivery Charges"),
+                trailing: Text("₹${deliveryCharges.value.toStringAsFixed(2)}"),
+              ),
+              ListTile(
+                title: Text("COD Charges"),
+                trailing: Text("₹${codCharges.value.toStringAsFixed(2)}"),
+              ),
+              Divider(),
+              ListTile(
+                title: Text(
+                  "Grand Total",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                trailing: Text(
+                  "₹${totalAmount.toStringAsFixed(2)}",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green),
+                ),
+              ),
+              SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () => Get.back(),
+                child: Text("Close"),
+              ),
+            ],
+          ),
+        );
+      }),
+      isScrollControlled: true,
+    );
+  }
+
+  /// **Fetch Charges from API**
+  Future<void> fetchCharges() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://backend.acubemart.in/api/product/all'),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        if (data.containsKey('data') && data['data'] is List) {
+          final List<dynamic> products = data['data'];
+
+          double maxDeliveryCharges = 0.0;
+          double maxCodCharges = 0.0;
+
+          for (var cartItem in cartItems) {
+            final product = products.firstWhere(
+              (prod) => prod['_id'] == cartItem.productId,
+              orElse: () => null,
+            );
+
+            if (product != null) {
+              double deliveryCharge =
+                  (product['deliveryCharges'] as num).toDouble();
+              double codCharge = (product['codCharges'] as num).toDouble();
+              maxDeliveryCharges = deliveryCharge > maxDeliveryCharges
+                  ? deliveryCharge
+                  : maxDeliveryCharges;
+
+              maxCodCharges =
+                  codCharge > maxCodCharges ? codCharge : maxCodCharges;
+            }
+          }
+
+          deliveryCharges.value = maxDeliveryCharges;
+          codCharges.value = maxCodCharges;
+        }
+      }
+    } catch (e) {
+      print("Error fetching charges: $e");
+    }
+  }
+
+  /// **Check Address and Proceed**
+  Future<void> checkAddressAndProceed(double totalAmount) async {
     try {
       final userId = storage.read("userId");
       if (userId == null) {
@@ -129,61 +276,32 @@ class CheckOutCart extends StatelessWidget {
         headers: {"Content-Type": "application/json"},
       );
 
-      print("Fetch Address Response Status: ${response.statusCode}");
-      print("Raw Response Body: ${response.body}");
-
       if (response.statusCode == 200) {
         final decodedResponse = json.decode(response.body);
+        final user = decodedResponse["data"];
 
-        if (decodedResponse is Map && decodedResponse.containsKey("data")) {
-          final user = decodedResponse["data"];
+        if (user["address"] is List && user["address"].isNotEmpty) {
+          final addressId = user["address"][0]["_id"];
+          final phone = user["phone"] ?? "";
 
-          if (user != null &&
-              user.containsKey("address") &&
-              user["address"] is List &&
-              user["address"].isNotEmpty) {
-            // ✅ Address exists, extract details
-            final address = user["address"][0];
-            final String addressId = address["_id"];
-            final String phone = user["phone"] ?? "";
-
-            for (var item in cartItems) {
-              print(
-                  "CartItem -> id: ${item.productId}, name: ${item.name}, quantity: ${item.quantity}");
-            }
-
-            // Prepare list of products with their IDs
-            List<Map<String, dynamic>> products = cartItems
-                .map((item) => {
-                      "productId": item.productId,
-                      "quantity": item.quantity,
-                    })
-                .toList();
-
-            Get.to(() => PaymentMethodsScreen(
-                  products: products,
-                  addressId: addressId,
-                  phone: phone,
-                  totalAmount: totalProductPrice.toInt(),
-                ));
-          } else {
-            // ❌ No address found, show popup
-            Get.defaultDialog(
-              title: "Address Required",
-              middleText: "Enter address details before proceeding.",
-              textConfirm: "OK",
-              confirmTextColor: Colors.white,
-              onConfirm: () => Get.back(),
-            );
-          }
+          Get.to(() => PaymentMethodsScreen(
+                products: cartItems
+                    .map((item) => {
+                          "productId": item.productId,
+                          "quantity": item.quantity
+                        })
+                    .toList(),
+                addressId: addressId,
+                phone: phone,
+                totalAmount: totalProductPrice.toInt(),
+              ));
         } else {
-          Get.snackbar("Error", "Invalid API response: 'data' key missing.");
+          Get.defaultDialog(
+              title: "Address Required",
+              middleText: "Enter address details before proceeding.");
         }
-      } else {
-        Get.snackbar("Error", "Failed to load user details");
       }
-    } catch (e, stacktrace) {
-      print("Error: $e\nStacktrace: $stacktrace");
+    } catch (e) {
       Get.snackbar("Error", "Something went wrong: ${e.toString()}");
     }
   }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -26,6 +27,7 @@ class PaymentMethodsScreen extends StatefulWidget {
 class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
   String selectedMethod = "COD";
   bool isLoading = false;
+  final CartController cartController = Get.find<CartController>();
 
   Future<String?> createTransaction(String userId, double amount) async {
     try {
@@ -176,6 +178,8 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         final orderNumber = responseBody["data"]["orderNumber"];
 
         await _updateUserOrders(userId, orderId, totalAmount, orderNumber);
+
+        await cartController.clearCart();
 
         Get.to(() => const PaymentSuccessWidget());
       } else {

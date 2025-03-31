@@ -110,6 +110,7 @@ class _ExhaustsState extends State<Exhausts> {
                                   product['price']?.toString() ?? 'N/A',
                               productRating: product['rating'] ?? 0.0,
                               ratingCount: product['ratingCount'] ?? 0,
+                              productSp: product['sp']?.toString() ?? 'N/A',
                             ));
                       },
                       child: Card(

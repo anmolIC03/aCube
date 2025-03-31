@@ -22,10 +22,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
   var isLoading = true.obs;
   var products = <dynamic>[].obs;
 
-  int page = 0; // Tracks the page number for lazy loading
+  int page = 0;
   int batchSize = 10; // Load products in batches of 10
-  var isFetchingMore =
-      false.obs; // Reactive boolean to prevent multiple requests
+  var isFetchingMore = false.obs;
 
   @override
   void initState() {
@@ -133,11 +132,12 @@ class ProductCard extends StatelessWidget {
         ? product['image'].map<String>((img) => img['url'].toString()).toList()
         : ['https://via.placeholder.com/150'];
     final double productPrice =
-        double.tryParse(product['sp'].toString()) ?? 0.0;
+        double.tryParse(product['price'].toString()) ?? 0.0;
     final String productBrand =
         (product['brand'] is List && product['brand'].isNotEmpty)
             ? product['brand'][0]['name'].toString()
             : 'Unknown Brand';
+    final double productSp = double.tryParse(product['sp'].toString()) ?? 0.0;
 
     return GestureDetector(
       onTap: () {
@@ -149,6 +149,7 @@ class ProductCard extends StatelessWidget {
               productBrand: productBrand,
               productRating: 0.0,
               ratingCount: 0,
+              productSp: productSp.toString(),
             ));
       },
       child: Card(

@@ -10,6 +10,7 @@ import 'package:acu/screens/components/products/rating_list.dart';
 import 'package:acu/screens/components/wishlist_controller.dart';
 import 'package:acu/screens/prodByCategory.dart';
 import 'package:acu/screens/prod_details.dart';
+import 'package:acu/screens/search.dart';
 import 'package:acu/screens/view_all.dart';
 import 'package:acu/screens/wishlist.dart';
 import 'package:acu/services/api_services.dart';
@@ -30,15 +31,17 @@ class _HomeScreenState extends State<HomeScreen> {
   final HomeController homeController = Get.put(HomeController());
 
   int selectedIndex = 0;
-  var elements = <Map<String, String>>[].obs; // Ensure correct type
+  var elements = <Map<String, String>>[].obs;
   var isLoading = false.obs;
   var searchQuery = ''.obs;
   var filteredProducts = <dynamic>[].obs;
+  final RxInt selectIndex = 0.obs; // Default selected tab (Home)
 
   @override
   void initState() {
     super.initState();
     fetchElements();
+    Get.find<CartController>().fetchCart();
 
     ever(homeController.productList, (_) {
       filteredProducts.assignAll(homeController.productList);
@@ -93,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchElements() async {
-    var response = await CategoryApiService.get('/element/all');
+    var response = await CategoryApiService.get('/category/all');
     if (!mounted) return;
 
     if (response is Map<String, dynamic> && response.containsKey('data')) {
@@ -132,25 +135,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Search Bar
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: TextField(
-                    onChanged: (value) {
-                      searchQuery.value = value;
-                      filterProducts();
+                  child: GestureDetector(
+                    onTap: () {
+                      Get.to(() => SearchScreen());
                     },
-                    decoration: InputDecoration(
-                      hintText: 'Search any Product...',
-                      prefixIcon: Icon(Icons.search),
-                      suffixIcon: Icon(Icons.filter_list),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 5,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          SizedBox(width: 15),
+                          Icon(Icons.search, color: Colors.grey),
+                          SizedBox(width: 10),
+                          Text(
+                            "Search any Product...",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-
                 SizedBox(height: 20),
 
                 // Carousel Section
@@ -205,38 +220,72 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-
                 Container(
-                    height: 50,
-                    child: Obx(() {
-                      if (isLoading.value) {
-                        return const Center(
-                          child: CircularProgressIndicator(),
+                  height: 50,
+                  child: Obx(() {
+                    if (isLoading.value) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+                    if (elements.isEmpty) {
+                      return Center(child: const Text("No Categories Found"));
+                    }
+
+                    return ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: elements.length > 6
+                          ? 7
+                          : elements.length, // Show up to 6 + 'View All'
+                      itemBuilder: (context, index) {
+                        if (index == 6) {
+                          // Show 'View All' button
+                          return GestureDetector(
+                            onTap: () {
+                              Get.to(() => ViewAllScreen());
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8),
+                              margin: EdgeInsets.only(left: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.red, // Customize color
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  "View All",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final category = elements[index];
+
+                        return CategoryCard(
+                          icon: Icons.category,
+                          label: category['name'] ?? 'Unknown',
+                          onTap: () {
+                            String? id = category['id'];
+                            String? name = category['name'];
+
+                            Get.to(() => ViewAllScreen(), arguments: {
+                              'selectedCategoryId': id,
+                              'selectedCategoryName': name,
+                            });
+
+                            print(
+                                "Navigating to ViewAllScreen with Category: ${category['name']}");
+                          },
                         );
-                      }
-                      if (elements.isEmpty) {
-                        return Center(child: const Text("No Categories Found"));
-                      }
-                      return ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: elements.length > 5 ? 5 : elements.length,
-                          itemBuilder: (context, index) {
-                            final category = elements[index];
-
-                            return CategoryCard(
-                                icon: Icons.category,
-                                label: category['name'] ?? 'Unknown',
-                                onTap: () {
-                                  String? id = category['id'];
-                                  String? name = category['name'];
-
-                                  navigateToProductsScreen(id, name);
-
-                                  print(
-                                      "Selected Category : ${category['name']}");
-                                });
-                          });
-                    })),
+                      },
+                    );
+                  }),
+                ),
 
                 SizedBox(height: 20),
 
@@ -265,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Center(child: Text('No products found'));
                     } else {
                       return SizedBox(
-                        height: 390,
+                        height: 410,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: filteredProducts.length,
@@ -279,10 +328,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         productId: product.id,
                                         productName: product.name,
                                         productImages: product.images,
-                                        productPrice: product.sp.toString(),
+                                        productPrice: product.price.toString(),
                                         productBrand: product.brand,
                                         productRating: product.rating,
                                         ratingCount: product.ratingCount,
+                                        productSp: product.sp.toString(),
                                       ));
                                 },
                                 child: _buildProductCard(product),
@@ -410,47 +460,57 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: Container(
-        color: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-          child: GNav(
-            haptic: true,
-            backgroundColor: Colors.white,
-            activeColor: Color.fromRGBO(185, 28, 28, 1.0),
-            tabBackgroundColor: Colors.grey.shade100,
-            padding: EdgeInsets.all(20),
-            gap: 8,
-            onTabChange: (index) {
-              print(index);
-            },
-            tabs: [
-              GButton(
-                icon: Icons.home,
-                text: 'Home',
-              ),
-              GButton(
-                icon: Icons.favorite,
-                text: 'Wishlist',
-                onPressed: () {
-                  Get.to(() => WishlistScreen());
+      bottomNavigationBar: Obx(() => Container(
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+              child: GNav(
+                haptic: true,
+                backgroundColor: Colors.white,
+                activeColor: Color.fromRGBO(185, 28, 28, 1.0),
+                tabBackgroundColor: Colors.grey.shade100,
+                padding: EdgeInsets.all(20),
+                gap: 8,
+                selectedIndex: selectIndex.value, // Bind selected index
+                onTabChange: (index) {
+                  selectIndex.value = index; // Update selected tab
+                  print("Tab Changed: $index");
+
+                  if (index == 1) {
+                    Get.to(() => WishlistScreen())!.then((_) {
+                      selectIndex.value = 0; // Set back to Home when returning
+                    });
+                  } else if (index == 2) {
+                    Get.to(() => CartPage())!.then((_) {
+                      selectIndex.value = 0;
+                    });
+                  } else if (index == 3) {
+                    Get.to(() => SearchScreen())!.then((_) {
+                      selectIndex.value = 0;
+                    });
+                  }
                 },
+                tabs: [
+                  GButton(
+                    icon: Icons.home,
+                    text: 'Home',
+                  ),
+                  GButton(
+                    icon: Icons.favorite,
+                    text: 'Wishlist',
+                  ),
+                  GButton(
+                    icon: Icons.shopping_cart,
+                    text: 'Cart',
+                  ),
+                  GButton(
+                    icon: Icons.search,
+                    text: 'Search',
+                  ),
+                ],
               ),
-              GButton(
-                icon: Icons.shopping_cart,
-                text: 'Cart',
-                onPressed: () {
-                  Get.to(() => CartPage());
-                },
-              ),
-              GButton(
-                icon: Icons.search,
-                text: 'Search',
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
+          )),
     );
   }
 
@@ -523,8 +583,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final wishlist = <CartItem>[].obs;
 
     return Container(
-      width: 240,
-      height: 310,
+      width: 300,
+      height: 320,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -572,14 +632,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Add to wishlist
                         wishlistController.addToWishlist(
                           CartItem(
+                            productId: product.id,
                             name: product.name,
                             price: product.sp,
                             quantity: 1,
-                            image: product.images.isNotEmpty
-                                ? product.images.first
-                                : 'https://via.placeholder.com/150',
+                            images: product.images.isNotEmpty
+                                ? product.images
+                                : ['https://via.placeholder.com/150'],
                             brand: product.brand,
-                            rating: product.rating,
                           ),
                         );
                         Get.snackbar('Added to Wishlist', product.name);
@@ -618,36 +678,110 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Text(
-                      '\₹${product.sp.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '\₹${product.price.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        // Selling Price and Discount %
+                        Row(
+                          children: [
+                            Text(
+                              '₹${product.sp.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            // Discount Percentage
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${_calculateDiscount(product.price, product.sp)}% OFF',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                     IconButton(
-                      icon: Icon(
-                        Icons.add_circle,
-                        size: 34,
-                        color: Color.fromRGBO(251, 137, 4, 1),
-                      ),
+                      icon: Obx(() {
+                        int quantity = cartController.cartItems
+                                .firstWhereOrNull(
+                                    (item) => item.productId == product.id)
+                                ?.quantity ??
+                            0;
+
+                        return quantity > 0
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.remove_circle,
+                                        size: 24, color: Colors.red),
+                                    onPressed: () {
+                                      if (quantity > 1) {
+                                        cartController.updateQuantity(
+                                            product.id, quantity - 1);
+                                      } else {
+                                        cartController.removeItem(product.id);
+                                      }
+                                    },
+                                  ),
+                                  Text(
+                                    quantity.toString(),
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.add_circle,
+                                        size: 24, color: Colors.green),
+                                    onPressed: () {
+                                      cartController.updateQuantity(
+                                          product.id, quantity + 1);
+                                    },
+                                  ),
+                                ],
+                              )
+                            : Center(
+                                child: IconButton(
+                                  icon: cartController.isLoading.value
+                                      ? CircularProgressIndicator()
+                                      : Icon(Icons.add_circle,
+                                          size: 34,
+                                          color:
+                                              Color.fromRGBO(251, 137, 4, 1)),
+                                  onPressed: () {
+                                    cartController.addItem(product.id);
+                                  },
+                                ),
+                              );
+                      }),
                       onPressed: () {
-                        CartItem cartItem = CartItem(
-                          productId: product.id,
-                          name: product.name,
-                          price: product.sp,
-                          quantity: 1,
-                          image: product.images.isNotEmpty
-                              ? product.images.first
-                              : 'https://via.placeholder.com/150',
-                          brand: product.brand,
-                          rating: product.rating,
-                        );
-                        cartController.addItem(cartItem);
-                        Get.snackbar('Added to Cart', product.name);
+                        cartController.addItem(product.id);
                       },
                     ),
                   ],
@@ -658,5 +792,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  int _calculateDiscount(double mrp, double sp) {
+    if (mrp <= sp) return 0; // No discount if selling price >= MRP
+    return ((1 - (sp / mrp)) * 100).round();
   }
 }

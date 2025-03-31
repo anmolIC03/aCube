@@ -57,7 +57,6 @@ class _CategoryListSectionState extends State<CategoryListSection>
         if (data['success'] == true) {
           List<dynamic> allModels = data['data'];
 
-          // Separate models into Car and Bike lists & limit to 5 models each
           carModels = allModels
               .where((model) => model['typeId']['name'] == 'Car')
               .take(5)

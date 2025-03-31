@@ -11,6 +11,12 @@ class WishlistScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new),
+          onPressed: () {
+            Get.back();
+          },
+        ),
         title: const Text(
           'Wishlist',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -47,7 +53,7 @@ class WishlistScreen extends StatelessWidget {
                           final item = wishlist[index];
                           return _buildWishlistCard(
                             productName: item.name,
-                            productImage: item.image,
+                            productImage: item.images.first,
                             productPrice: item.price.toString(),
                             productBrand: item.brand,
                             // Provide dynamic ratingCount

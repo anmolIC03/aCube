@@ -226,11 +226,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                 .toList()
                             : ['https://via.placeholder.com/150'];
                     final double productPrice =
-                        double.tryParse(product['sp'].toString()) ?? 0.0;
+                        double.tryParse(product['price'].toString()) ?? 0.0;
                     final String productBrand = (product['brand'] is List &&
                             product['brand'].isNotEmpty)
                         ? product['brand'][0]['name'].toString()
                         : 'Unknown Brand';
+                    final double productSp =
+                        double.tryParse(product['sp'].toString()) ?? 0.0;
 
                     return Card(
                       elevation: 3,
@@ -248,6 +250,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                             productBrand: productBrand,
                             productRating: 0.0,
                             ratingCount: 0,
+                            productSp: productSp.toString(),
                           ),
                         ),
                         child: Padding(

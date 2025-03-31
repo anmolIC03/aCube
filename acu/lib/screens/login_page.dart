@@ -48,7 +48,6 @@ class _LoginPageState extends State<LoginPage> {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200 && responseData["success"] == true) {
-        // ✅ Correctly extract `data`
         final userData = responseData["data"];
         if (userData != null && userData["_id"] != null) {
           final userId = userData["_id"];
