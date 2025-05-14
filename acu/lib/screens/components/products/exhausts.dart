@@ -146,7 +146,7 @@ class _ExhaustsState extends State<Exhausts> {
                                     ),
                                     const SizedBox(height: 5),
                                     Text(
-                                      "₹${product['price'] ?? "N/A"}",
+                                      "₹${product['sp'] ?? "N/A"}",
                                       style: const TextStyle(
                                         fontSize: 16,
                                         color: Color.fromRGBO(185, 28, 28, 1.0),

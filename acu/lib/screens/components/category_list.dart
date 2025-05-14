@@ -141,7 +141,7 @@ class _CategoryListSectionState extends State<CategoryListSection>
         ),
         SizedBox(height: 8),
         Container(
-          height: 300, // Adjust height for better layout
+          height: 300,
           child: isModelLoading
               ? Center(child: CircularProgressIndicator())
               : TabBarView(

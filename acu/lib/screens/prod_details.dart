@@ -124,7 +124,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                   productImage: widget.productImages.isNotEmpty
                       ? widget.productImages.first
                       : 'https://via.placeholder.com/150',
-                  productPrice: double.tryParse(widget.productPrice) ?? 0.0,
+                  productPrice: double.tryParse(widget.productSp) ?? 0.0,
                   productRating: widget.productRating,
                   deliveryCharges: deliveryCharges,
                   codCharges: codCharges,
@@ -440,68 +440,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Checkboxes
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: isAddressSame,
-                              onChanged: (value) {
-                                setState(() {
-                                  isAddressSame = value ?? false;
-                                });
-                              },
-                              activeColor: Colors.red,
-                            ),
-                            Text(
-                              'My billing and delivery information are the \nsame',
-                              style:
-                                  TextStyle(fontSize: 16, color: Colors.black),
-                            ),
-                          ],
-                        ),
-                        Row(children: [
-                          Checkbox(
-                            value: ageConsent,
-                            onChanged: (value) {
-                              setState(() {
-                                ageConsent = value ?? false;
-                              });
-                            },
-                            activeColor: Colors.red,
-                          ),
-                          Text(
-                            'I’m 13+ years old',
-                            style: TextStyle(fontSize: 16, color: Colors.black),
-                          ),
-                        ]),
-                        Row(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 12),
-                              child: Text(
-                                'Also want product updates with our newsletter',
-                                style: TextStyle(
-                                    fontSize: 16, color: Colors.black),
-                              ),
-                            )
-                          ],
-                        ),
-                        SizedBox(height: 16),
-                        Row(children: [
-                          Checkbox(
-                            value: wantDetails,
-                            onChanged: (value) {
-                              setState(() {
-                                wantDetails = value ?? false;
-                              });
-                            },
-                            activeColor: Colors.red,
-                          ),
-                          Text(
-                            'Yes, I’d like to receive emails about \nexclusive sales and more.',
-                            style: TextStyle(fontSize: 16, color: Colors.black),
-                          ),
-                        ]),
-                        SizedBox(height: 20),
+
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -543,13 +482,9 @@ class _ProductDetailsState extends State<ProductDetails> {
                             ),
                             SizedBox(height: 10),
                             ElevatedButton(
-                              onPressed: (isAddressSame && ageConsent)
-                                  ? () {
-                                      if (!isLoading) {
-                                        navigateToCheckout();
-                                      }
-                                    }
-                                  : null, // Disable button if conditions aren't met
+                              onPressed: () {
+                                navigateToCheckout();
+                              }, // Disable button if conditions aren't met
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
                                     Color.fromRGBO(185, 28, 28, 1.0),

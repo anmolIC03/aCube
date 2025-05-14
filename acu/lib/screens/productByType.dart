@@ -188,25 +188,43 @@ class _ProductListScreenState extends State<ProductListScreen> {
           products = allProducts.where((product) {
             return product['model'].any((m) => m['_id'] == widget.modelId);
           }).toList();
+          if (mounted) {
+            setState(() {
+              products = products;
+              isLoading = false;
+            });
+          }
         }
       } else {
         print("Failed to fetch products. Status Code: ${response.statusCode}");
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     } catch (e) {
       print("Error fetching products: $e");
-    }
-
-    if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Products for ${widget.modelName}")),
+      appBar: AppBar(
+        title: Text("Products for ${widget.modelName}"),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new),
+          onPressed: () {
+            Get.back();
+          },
+        ),
+      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : products.isEmpty
@@ -279,10 +297,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                     Text("Brand: $productBrand",
                                         style: const TextStyle(
                                             color: Colors.grey)),
-                                    Text("₹${productPrice.toStringAsFixed(2)}",
+                                    Text("₹${productSp.toStringAsFixed(2)}",
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.blue)),
+                                            color: Color.fromRGBO(
+                                                185, 28, 28, 1.0))),
                                   ],
                                 ),
                               ),

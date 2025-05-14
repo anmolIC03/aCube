@@ -46,9 +46,19 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> fetchCategories() async {
     List<Map<String, dynamic>> categories =
         await CategoryApiService.fetchCategories();
+
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       categoryList = categories;
@@ -68,7 +78,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
       products.clear();
       page = 1;
       hasMore = true;
-      selectedElementId = ''; // 🔹 No element selected initially
+      selectedElementId = '';
     });
 
     List<Map<String, dynamic>> elements =
@@ -146,7 +156,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
             ),
       body: Column(
         children: [
-          /// 🔹 Categories (Horizontal Scroll)
+          /// Categories
           Container(
             height: 50,
             color: Colors.grey[100],
@@ -197,7 +207,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
                   ),
           ),
 
-          /// 🔹 Elements (GridView with 2 per row)
+          /// Elements
           Expanded(
             flex: 0,
             child: Container(
@@ -260,7 +270,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
             ),
           ),
 
-          /// 🔹 Products (Below Elements Grid)
+          /// Products
           Expanded(
             child: selectedElementId.isEmpty
                 ? Center(
@@ -287,7 +297,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
     );
   }
 
-  /// 🔹 Product Card UI
+  /// Product Card
   Widget _buildItemCard(Map<String, dynamic> item) {
     List<String> productImages =
         (item['image'] is List && item['image'].isNotEmpty)
@@ -324,7 +334,7 @@ class _ViewAllScreenState extends State<ViewAllScreen> {
     );
   }
 
-  /// 🔹 Shimmer Loading for Elements Grid
+  /// Shimmer Loading
   Widget _buildShimmerGrid() {
     return GridView.builder(
       shrinkWrap: true,

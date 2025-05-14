@@ -273,10 +273,10 @@ class _OrderConfirmScreenState extends State<OrderConfirmScreen> {
           isSelected: _selectedPaymentOption == 0,
           title: "Cash On Delivery",
           subtitle:
-              "COD charges: ${widget.codCharges} \nAn extra charge applies on COD to cover shipping costs and taxes",
+              "COD charges: ₹${widget.codCharges.toStringAsFixed(2)} \nAn extra charge applies on COD to cover shipping costs and taxes",
           onSelect: () {
             setState(() {
-              _selectedPaymentOption = 0; // Always keep COD selected
+              _selectedPaymentOption = 0;
             });
           },
         ),
@@ -325,9 +325,14 @@ class _OrderConfirmScreenState extends State<OrderConfirmScreen> {
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
-              Text(subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 15)),
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: const TextStyle(fontSize: 15, color: Colors.black),
+                  children: _formatAmountWithColor(
+                      subtitle), // ✅ Apply color formatting
+                ),
+              ),
             ],
           ],
         ),
@@ -357,13 +362,50 @@ class _OrderConfirmScreenState extends State<OrderConfirmScreen> {
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
-              Text(subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14)),
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: const TextStyle(fontSize: 14, color: Colors.black),
+                  children: _formatAmountWithColor(subtitle),
+                ),
+              ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  List<TextSpan> _formatAmountWithColor(String text) {
+    final RegExp amountPattern = RegExp(r'₹\d+(\.\d+)?');
+    List<TextSpan> spans = [];
+    int lastIndex = 0;
+
+    for (RegExpMatch match in amountPattern.allMatches(text)) {
+      // Get the matched amount
+      String amount = match.group(0) ?? "";
+
+      // Add normal text before the amount
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(text: text.substring(lastIndex, match.start)));
+      }
+
+      spans.add(TextSpan(
+        text: amount,
+        style: const TextStyle(
+          color: Colors.red,
+          fontWeight: FontWeight.bold,
+        ),
+      ));
+
+      lastIndex = match.end;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(lastIndex)));
+    }
+
+    return spans;
   }
 }

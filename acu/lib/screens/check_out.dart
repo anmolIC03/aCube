@@ -148,11 +148,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             isNumeric: true),
                         SizedBox(height: 8),
                         ElevatedButton.icon(
+                          style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.all(
+                                  Color.fromRGBO(185, 28, 28, 1.0))),
                           onPressed: () {
                             Get.snackbar("Update", "Address Updated");
                           },
-                          icon: Icon(Icons.save),
-                          label: Text("Save Address"),
+                          icon: Icon(
+                            Icons.save,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            "Save Address",
+                            style: TextStyle(color: Colors.white),
+                          ),
                         ),
                       ],
                     ),
@@ -190,60 +199,73 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     style:
                         TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () {
-                    if (selectedAddress.value == null) {
-                      Get.snackbar("Error",
-                          "Please add a delivery address before proceeding");
-                      return;
-                    }
 
-                    Get.to(() => OrderConfirmScreen(
-                          productName: widget.productName,
-                          productImage: widget.productImage,
-                          productPrice: widget.productPrice,
-                          productRating: widget.productRating,
-                          deliveryCharges: widget.deliveryCharges,
-                          codCharges: widget.codCharges,
-                          productId: widget.productId,
-                          addressId: selectedAddress.value!['_id'] ?? "",
-                          phone: phoneNumber.value,
-                        ));
-                  },
-                  child: Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          Image.network(widget.productImage,
-                              width: 100, height: 100, fit: BoxFit.cover),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(widget.productName,
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold)),
-                                SizedBox(height: 4),
-                                Text('₹${widget.productPrice}',
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.green)),
-                              ],
-                            ),
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Image.network(widget.productImage,
+                            width: 100, height: 100, fit: BoxFit.cover),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(widget.productName,
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
+                              SizedBox(height: 4),
+                              Text('₹${widget.productPrice}',
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.green)),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
             );
           }),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.all(16),
+        color: Colors.white,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color.fromRGBO(185, 28, 28, 1.0),
+            padding: EdgeInsets.symmetric(vertical: 14),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          onPressed: () {
+            if (selectedAddress.value == null) {
+              Get.snackbar(
+                  "Error", "Please add a delivery address before proceeding");
+              return;
+            }
+
+            Get.to(() => OrderConfirmScreen(
+                  productName: widget.productName,
+                  productImage: widget.productImage,
+                  productPrice: widget.productPrice,
+                  productRating: widget.productRating,
+                  deliveryCharges: widget.deliveryCharges,
+                  codCharges: widget.codCharges,
+                  productId: widget.productId,
+                  addressId: selectedAddress.value!['_id'] ?? "",
+                  phone: phoneNumber.value,
+                ));
+          },
+          child: Text("Continue",
+              style: TextStyle(fontSize: 18, color: Colors.white)),
         ),
       ),
     );
