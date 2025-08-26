@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
+import 'package:acu/screens/payment_success.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:acu/screens/payment_success.dart';
+
+final cartController = Get.put(CartController());
 
 class PaymentMethodsScreen extends StatefulWidget {
   final List<Map<String, dynamic>> products;
@@ -21,33 +23,236 @@ class PaymentMethodsScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _PaymentMethodsScreenState createState() => _PaymentMethodsScreenState();
+  State<PaymentMethodsScreen> createState() => _PaymentMethodsScreenState();
 }
 
 class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
-  String selectedMethod = "COD";
+  int _selectedPaymentOption = 0;
   bool isLoading = false;
-  final CartController cartController = Get.find<CartController>();
+
+  @override
+  Widget build(BuildContext context) {
+    double advance = widget.totalAmount * 0.10;
+    double pending = widget.totalAmount - advance;
+
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        elevation: 0,
+        title: const Text("Payment Options",
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Order Summary",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _buildPriceRow("Order Total:", widget.totalAmount.toDouble(),
+                isBold: true),
+            const Divider(height: 30),
+            const Text("Select Payment Method",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            _buildPaymentOption(
+              index: 0,
+              isSelected: _selectedPaymentOption == 0,
+              title: "Cash On Delivery",
+              subtitle: "COD Charges Apply. Pay full amount on delivery.",
+              onSelect: () => setState(() => _selectedPaymentOption = 0),
+            ),
+            const SizedBox(height: 10),
+            _buildDisabledOption(
+              title: "Pay Now (Online Payment)",
+              subtitle: "Get free shipping and 0 extra charge.",
+            ),
+            const SizedBox(height: 10),
+            _buildDisabledOption(
+              title: "10% Advance, Rest on Delivery",
+              subtitle:
+                  "Advance: ₹${advance.toStringAsFixed(2)}\nPending: ₹${pending.toStringAsFixed(2)}",
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: _showOrderDetails,
+                  child: Column(
+                    children: [
+                      Text("₹${widget.totalAmount.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold)),
+                      const Text('View Details',
+                          style: TextStyle(
+                              color: Color.fromRGBO(185, 28, 28, 1.0),
+                              fontSize: 16)),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading ? null : placeOrder,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(185, 28, 28, 1.0),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text("PROCEED TO PAYMENT",
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOrderDetails() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const Text("Order Details",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              ...widget.products.map((product) {
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(product["name"] ?? "Unnamed Product",
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text("Quantity: ${product["quantity"] ?? 1}"),
+                  trailing: Text("₹${product["price"] ?? 0}"),
+                );
+              }).toList(),
+              const Divider(),
+              _buildPriceRow("Total:", widget.totalAmount.toDouble(),
+                  isBold: true),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPriceRow(String label, double value, {bool isBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 18)),
+        Text("₹${value.toStringAsFixed(2)}",
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: 18,
+            )),
+      ],
+    );
+  }
+
+  Widget _buildPaymentOption({
+    required int index,
+    required bool isSelected,
+    required String title,
+    required String subtitle,
+    required VoidCallback onSelect,
+  }) {
+    return ElevatedButton(
+      onPressed: onSelect,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red.shade100,
+        foregroundColor: Colors.black,
+        padding: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isSelected
+              ? const BorderSide(
+                  color: Color.fromRGBO(185, 28, 28, 1.0), width: 2)
+              : BorderSide.none,
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDisabledOption({
+    required String title,
+    required String subtitle,
+  }) {
+    return ElevatedButton(
+      onPressed: null,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.grey.shade300,
+        foregroundColor: Colors.grey.shade600,
+        padding: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  // ========== BACKEND METHODS ========== //
 
   Future<String?> createTransaction(String userId, double amount) async {
     try {
-      String paymentMode = "COD";
-      final transactionData = {
-        "userId": userId,
-        "amount": amount,
-        "paymentMode": paymentMode,
-        "status": "SUCCESS",
-      };
-
       final response = await http.post(
         Uri.parse("https://backend.acubemart.in/api/transaction/add"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(transactionData),
+        body: jsonEncode({
+          "userId": userId,
+          "amount": amount,
+          "paymentMode": "COD",
+          "status": "SUCCESS",
+        }),
       );
 
       if (response.statusCode == 201) {
-        final responseData = jsonDecode(response.body);
-        return responseData["data"]["_id"];
+        final data = jsonDecode(response.body);
+        return data["data"]["_id"];
       } else {
         print("Transaction Error: ${response.body}");
         return null;
@@ -62,11 +267,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       String userId, String orderId, int total, int orderNumber) async {
     final updateData = {
       "orders": [
-        {
-          "_id": orderId,
-          "total": total,
-          "orderNumber": orderNumber,
-        }
+        {"_id": orderId, "total": total, "orderNumber": orderNumber}
       ]
     };
 
@@ -77,72 +278,37 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         body: jsonEncode(updateData),
       );
 
-      print("User Update Response: ${response.statusCode}");
-      print("User Update Response Body: ${response.body}");
-
       if (response.statusCode != 200) {
-        Get.snackbar("Error", "Failed to update user orders",
-            snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar("Error", "Failed to update user orders");
       }
     } catch (e) {
-      Get.snackbar("Error", "Error updating user orders: ${e.toString()}",
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar("Error", "Update Error: ${e.toString()}");
     }
   }
 
   Future<void> placeOrder() async {
-    if (isLoading) return;
-
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
     final userId = GetStorage().read("userId");
-    //final productId = widget.product["_id"];
     final totalAmount = widget.totalAmount;
     final phone = widget.phone;
     final addressId = widget.addressId;
 
-    List<String> missingFields = [];
-
-    if (userId == null) missingFields.add("User ID");
-    //if (productId == null) missingFields.add("Product ID");
-    if (totalAmount == 0) missingFields.add("Total Amount");
-    if (phone.isEmpty) missingFields.add("Phone Number");
-    if (addressId.isEmpty) missingFields.add("Address ID");
-
-    if (missingFields.isNotEmpty) {
-      Get.snackbar(
-        "Error",
-        "Missing required fields: ${missingFields.join(', ')}",
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      setState(() {
-        isLoading = false;
-      });
+    if (userId == null || phone.isEmpty || addressId.isEmpty) {
+      Get.snackbar("Error", "Missing required fields");
+      setState(() => isLoading = false);
       return;
     }
 
-    String? transactionId =
+    final transactionId =
         await createTransaction(userId, totalAmount.toDouble());
     if (transactionId == null) {
-      Get.snackbar(
-        "Error",
-        "Failed to create transaction",
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      setState(() {
-        isLoading = false;
-      });
+      Get.snackbar("Error", "Transaction creation failed");
+      setState(() => isLoading = false);
       return;
     }
 
-    final List<Map<String, dynamic>> productList =
-        widget.products.map((product) {
-      if (!product.containsKey("_id") || product["_id"] == null) {
-        print("🚨 Missing productId for product: ${jsonEncode(product)}");
-      }
-
+    final productList = widget.products.map((product) {
       return {
         "productId": product["_id"] ?? product["productId"],
         "quantity": product["quantity"] ?? 1,
@@ -160,8 +326,6 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       "statusUpdateTime": [],
     };
 
-    print("Order Data: ${jsonEncode(orderData)}");
-
     try {
       final response = await http.post(
         Uri.parse("https://backend.acubemart.in/api/order/add"),
@@ -169,101 +333,26 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         body: jsonEncode(orderData),
       );
 
-      print("Response Status: ${response.statusCode}");
-      print("Response Body: ${response.body}");
-
       if (response.statusCode == 201) {
-        final responseBody = jsonDecode(response.body);
-        final orderId = responseBody["data"]["_id"];
-        final orderNumber = responseBody["data"]["orderNumber"];
-
-        await _updateUserOrders(userId, orderId, totalAmount, orderNumber);
+        final body = jsonDecode(response.body);
+        await _updateUserOrders(
+          userId,
+          body["data"]["_id"],
+          totalAmount,
+          body["data"]["orderNumber"],
+        );
 
         await cartController.clearCart();
-
         Get.to(() => const PaymentSuccessWidget());
       } else {
-        Get.snackbar("Error", "Failed to place order: ${response.body}",
-            snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar("Error", "Order failed: ${response.body}");
+        print(response.body);
       }
     } catch (e) {
-      Get.snackbar("Error", "Something went wrong: ${e.toString()}",
-          snackPosition: SnackPosition.BOTTOM);
+      print(e.toString());
+      Get.snackbar("Error", "Something went wrong: ${e.toString()}");
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade200,
-      appBar: AppBar(
-        elevation: 0,
-        title: const Text("Select Payment Method",
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        leading: IconButton(
-          onPressed: () => Get.back(),
-          icon: const Icon(Icons.arrow_back_ios_new, size: 26),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Card(
-              elevation: 5,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                leading: Icon(Icons.local_shipping,
-                    color: Colors.orange.shade700, size: 40),
-                title: const Text("Cash On Delivery",
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                subtitle: const Text("Pay when you receive the order",
-                    style: TextStyle(fontSize: 14, color: Colors.grey)),
-                trailing: Icon(Icons.check_circle,
-                    color: selectedMethod == "Cash On Delivery"
-                        ? Colors.green
-                        : Colors.grey,
-                    size: 28),
-                onTap: () =>
-                    setState(() => selectedMethod = "Cash On Delivery"),
-              ),
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: isLoading ? null : placeOrder,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromRGBO(185, 28, 28, 1.0),
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: isLoading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        strokeWidth: 3,
-                      ),
-                    )
-                  : Text("CONTINUE",
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:acu/screens/prod_details.dart';
+import 'package:shimmer/shimmer.dart';
 
 class TypeAndModel extends StatefulWidget {
   const TypeAndModel({super.key});
@@ -36,7 +37,6 @@ class _TypeAndModelState extends State<TypeAndModel>
         if (data['success'] == true) {
           List<dynamic> allModels = data['data'];
 
-          // Separate models into Car and Bike lists
           carModels = allModels
               .where((model) => model['typeId']['name'] == 'Car')
               .toList();
@@ -44,17 +44,13 @@ class _TypeAndModelState extends State<TypeAndModel>
               .where((model) => model['typeId']['name'] == 'Bike')
               .toList();
         }
-      } else {
-        print("Failed to fetch models. Status Code: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching models: $e");
     }
 
     if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
 
@@ -67,18 +63,30 @@ class _TypeAndModelState extends State<TypeAndModel>
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: Colors.grey[100],
         appBar: AppBar(
-          title: const Text("Select Model"),
+          backgroundColor: const Color.fromRGBO(185, 28, 28, 1),
+          elevation: 3,
+          title: const Text("Select Your Model",
+              style:
+                  TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          leading: IconButton(
+              color: Colors.white,
+              icon: const Icon(Icons.arrow_back_ios_new),
+              onPressed: () => Get.back()),
           bottom: TabBar(
+            indicatorColor: Colors.white,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
             controller: _tabController,
             tabs: const [
-              Tab(text: "Cars"),
-              Tab(text: "Bikes"),
+              Tab(icon: Icon(Icons.directions_car), text: "Cars"),
+              Tab(icon: Icon(Icons.motorcycle), text: "Bikes"),
             ],
           ),
         ),
         body: isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? buildShimmer()
             : TabBarView(
                 controller: _tabController,
                 children: [
@@ -90,43 +98,70 @@ class _TypeAndModelState extends State<TypeAndModel>
     );
   }
 
+  Widget buildShimmer() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: 6,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12),
+      itemBuilder: (_, __) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget buildModelGrid(List<dynamic> models) {
     if (models.isEmpty) {
       return const Center(child: Text("No models available"));
     }
     return GridView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, // 2 items per row
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.9, // Adjust the height of each grid item
-      ),
+          crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12),
       itemCount: models.length,
       itemBuilder: (context, index) {
         var model = models[index];
         return GestureDetector(
           onTap: () => navigateToProducts(model['_id'], model['name']),
-          child: Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            elevation: 3,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                )
+              ],
+            ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: model['mediaId'] != null
-                      ? Image.network(
-                          model['mediaId']['url'],
-                          width: double.infinity,
-                          fit: BoxFit.scaleDown,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.image_not_supported, size: 50),
-                        )
-                      : const Icon(Icons.image_not_supported, size: 50),
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(14)),
+                    child: model['mediaId'] != null
+                        ? Image.network(
+                            model['mediaId']['url'],
+                            width: double.infinity,
+                            fit: BoxFit.contain,
+                          )
+                        : const Icon(Icons.image_not_supported, size: 50),
+                  ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(10),
                   child: Column(
                     children: [
                       Text(
@@ -138,11 +173,11 @@ class _TypeAndModelState extends State<TypeAndModel>
                       const SizedBox(height: 4),
                       Text(
                         model['brandId']['name'],
-                        style: const TextStyle(color: Colors.grey),
+                        style: TextStyle(color: Colors.grey[600]),
                       ),
                     ],
                   ),
-                ),
+                )
               ],
             ),
           ),
@@ -156,8 +191,11 @@ class ProductListScreen extends StatefulWidget {
   final String modelId;
   final String modelName;
 
-  const ProductListScreen(
-      {super.key, required this.modelId, required this.modelName});
+  const ProductListScreen({
+    super.key,
+    required this.modelId,
+    required this.modelName,
+  });
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -184,27 +222,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
         if (data['success'] == true) {
           List<dynamic> allProducts = data['data'];
 
-          // Filter products by selected model
           products = allProducts.where((product) {
             return product['model'].any((m) => m['_id'] == widget.modelId);
           }).toList();
-          if (mounted) {
-            setState(() {
-              products = products;
-              isLoading = false;
-            });
-          }
-        }
-      } else {
-        print("Failed to fetch products. Status Code: ${response.statusCode}");
-        if (mounted) {
-          setState(() {
-            isLoading = false;
-          });
         }
       }
     } catch (e) {
-      print("Error fetching products: $e");
+      debugPrint("Error fetching products: $e");
+    } finally {
       if (mounted) {
         setState(() {
           isLoading = false;
@@ -217,23 +242,30 @@ class _ProductListScreenState extends State<ProductListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Products for ${widget.modelName}"),
+        title: Text(
+          widget.modelName,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new),
-          onPressed: () {
-            Get.back();
-          },
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () => Get.back(),
         ),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : products.isEmpty
               ? const Center(child: Text("No products available"))
-              : ListView.builder(
+              : GridView.builder(
+                  padding: const EdgeInsets.all(10),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2, // Two cards per row
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.72,
+                  ),
                   itemCount: products.length,
-                  padding: const EdgeInsets.all(8),
                   itemBuilder: (context, index) {
-                    var product = products[index];
+                    final product = products[index];
                     final String productId = product['_id'];
                     final String productName =
                         product['name'] ?? 'Unknown Product';
@@ -252,61 +284,78 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     final double productSp =
                         double.tryParse(product['sp'].toString()) ?? 0.0;
 
-                    return Card(
-                      elevation: 3,
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 6),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      child: InkWell(
-                        onTap: () => Get.to(
-                          () => ProductDetails(
-                            productId: productId,
-                            productName: productName,
-                            productImages: productImages,
-                            productPrice: productPrice.toString(),
-                            productBrand: productBrand,
-                            productRating: 0.0,
-                            ratingCount: 0,
-                            productSp: productSp.toString(),
-                          ),
+                    return GestureDetector(
+                      onTap: () => Get.to(
+                        () => ProductDetails(
+                          productId: productId,
+                          productName: productName,
+                          productImages: productImages,
+                          productPrice: productPrice.toString(),
+                          productBrand: productBrand,
+                          productSp: productSp.toString(),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Card(
+                        elevation: 4,
+                        shadowColor: Colors.grey.withOpacity(0.3),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Product Image
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(15),
+                                  topRight: Radius.circular(15),
+                                ),
                                 child: Image.network(
                                   productImages.first,
-                                  width: 80,
-                                  height: 80,
                                   fit: BoxFit.cover,
+                                  width: double.infinity,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(productName,
-                                        style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold)),
-                                    Text("Brand: $productBrand",
-                                        style: const TextStyle(
-                                            color: Colors.grey)),
-                                    Text("₹${productSp.toStringAsFixed(2)}",
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Color.fromRGBO(
-                                                185, 28, 28, 1.0))),
-                                  ],
-                                ),
+                            ),
+
+                            // Details Section
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    productName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    productBrand,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "₹${productSp.toStringAsFixed(2)}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color.fromRGBO(185, 28, 28, 1),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     );

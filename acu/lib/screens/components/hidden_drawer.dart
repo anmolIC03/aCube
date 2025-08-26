@@ -1,7 +1,7 @@
 import 'package:acu/screens/components/products/exhausts.dart';
 import 'package:acu/screens/help.dart';
 import 'package:acu/screens/home.dart';
-import 'package:acu/screens/login_page.dart';
+import 'package:acu/screens/order_history.dart';
 import 'package:acu/screens/profile.dart';
 import 'package:acu/screens/view_all.dart';
 import 'package:flutter/material.dart';
@@ -20,10 +20,8 @@ class HiddenDrawer extends StatefulWidget {
 
 class _HiddenDrawerState extends State<HiddenDrawer> {
   List<ScreenHiddenDrawer> _pages = [];
-  final storage = GetStorage(); // GetStorage instance
-  int _currentIndex = 0;
-
-  final myTextStyle = TextStyle(
+  final storage = GetStorage();
+  final myTextStyle = const TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.bold,
     color: Colors.black,
@@ -32,65 +30,71 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
   @override
   void initState() {
     super.initState();
+    _buildMenu();
+  }
+
+  void _buildMenu() {
+    final userId = storage.read("userId");
 
     _pages = [
       ScreenHiddenDrawer(
         ItemHiddenMenu(
           name: 'ACUBE MART',
-          baseStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+          baseStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
           selectedStyle: myTextStyle,
-          colorLineSelected: Color.fromRGBO(185, 28, 28, 1.0),
+          colorLineSelected: const Color.fromRGBO(185, 28, 28, 1.0),
         ),
         HomeScreen(),
       ),
       ScreenHiddenDrawer(
         ItemHiddenMenu(
           name: 'By Performance',
-          baseStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          baseStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           selectedStyle: myTextStyle,
-          colorLineSelected: Color.fromRGBO(185, 28, 28, 1.0),
+          colorLineSelected: const Color.fromRGBO(185, 28, 28, 1.0),
         ),
         Exhausts(),
       ),
       ScreenHiddenDrawer(
         ItemHiddenMenu(
-          name: 'Help & FAQ',
-          baseStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          name: 'By Parts',
+          baseStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           selectedStyle: myTextStyle,
-          colorLineSelected: Color.fromRGBO(185, 28, 28, 1.0),
+          colorLineSelected: const Color.fromRGBO(185, 28, 28, 1.0),
+        ),
+        ViewAllScreen(fromDrawer: true),
+      ),
+      ScreenHiddenDrawer(
+        ItemHiddenMenu(
+          name: 'Help & FAQ',
+          baseStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          selectedStyle: myTextStyle,
+          colorLineSelected: const Color.fromRGBO(185, 28, 28, 1.0),
         ),
         HelpFAQ(),
       ),
-      ScreenHiddenDrawer(
-        ItemHiddenMenu(
-          name: 'By Parts',
-          baseStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          selectedStyle: myTextStyle,
-          colorLineSelected: Color.fromRGBO(185, 28, 28, 1.0),
-        ),
-        ViewAllScreen(
-          fromDrawer: true,
-        ),
-      ),
-      // Logout option
-      ScreenHiddenDrawer(
-        ItemHiddenMenu(
-          name: 'Logout',
-          baseStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: Colors.black,
-          ),
-          selectedStyle: myTextStyle,
-          colorLineSelected: Colors.red,
-          onTap: () => logout(),
-        ),
-        HomeScreen(),
-      ),
     ];
+
+    if (userId != null && userId.isNotEmpty) {
+      _pages.add(
+        ScreenHiddenDrawer(
+          ItemHiddenMenu(
+            name: 'Logout',
+            baseStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.black,
+            ),
+            selectedStyle: myTextStyle,
+            colorLineSelected: Colors.red,
+            onTap: logout,
+          ),
+          HomeScreen(),
+        ),
+      );
+    }
   }
 
-  // Logout function
   void logout() {
     Get.defaultDialog(
       title: "Logout",
@@ -99,8 +103,15 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
       textCancel: "No",
       confirmTextColor: Colors.white,
       onConfirm: () {
-        storage.erase(); // Clear user session
-        Get.offAll(() => LoginPage()); // Navigate to Login Screen
+        // 1) Close dialog immediately
+        Get.back();
+
+        // 2) Clear stored user data
+        storage.erase();
+
+        Future.delayed(const Duration(milliseconds: 100), () {
+          Get.offAll(() => const HiddenDrawer());
+        });
       },
     );
   }
@@ -110,18 +121,16 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
     return HiddenDrawerMenu(
       disableAppBarDefault: false,
       screens: _pages,
-      leadingAppBar: const Icon(
-        Icons.menu,
-        size: 28,
-      ),
+      leadingAppBar: const Icon(Icons.menu, size: 28),
       backgroundColorAppBar: Colors.white,
-      styleAutoTittleName: TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
+      styleAutoTittleName:
+          const TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
       backgroundColorMenu: Colors.white,
       initPositionSelected: 0,
       slidePercent: 40,
       elevationAppBar: 0,
       contentCornerRadius: 80,
-      boxShadow: [
+      boxShadow: const [
         BoxShadow(
           offset: Offset.zero,
           color: Colors.transparent,
@@ -129,22 +138,26 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
       ],
       actionsAppBar: [
         IconButton(
-          onPressed: () {},
-          icon: Icon(
-            (Icons.notifications_none),
-            size: 28,
-          ),
+          onPressed: () {
+            final userId = storage.read("userId");
+            if (userId != null && userId.isNotEmpty) {
+              Get.to(() => OrderHistoryScreen(userId: userId));
+            } else {
+              Get.snackbar('Error', 'User not logged in');
+            }
+          },
+          icon: const Icon(Icons.work_history, size: 28),
         ),
         GestureDetector(
           onTap: () {
             Get.to(() => ProfileScreen());
           },
-          child: CircleAvatar(
+          child: const CircleAvatar(
             radius: 20,
             backgroundImage: AssetImage('lib/assets/hero1.jpeg'),
           ),
         ),
-        SizedBox(width: 16),
+        const SizedBox(width: 16),
       ],
     );
   }

@@ -1,16 +1,21 @@
 import 'dart:convert';
+import 'package:acu/screens/cart_page.dart';
+import 'package:acu/screens/components/cart_components/cart_manager.dart';
+import 'package:acu/screens/components/cart_components/guestCartController.dart';
+import 'package:acu/screens/unified_checkout.dart';
 import 'package:carousel_slider/carousel_options.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:acu/screens/check_out.dart';
 import 'package:acu/screens/components/avail_card.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/cart_components/cart_item.dart';
-import 'package:acu/screens/components/products/rating_list.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ProductDetails extends StatefulWidget {
   final String productId;
@@ -18,8 +23,6 @@ class ProductDetails extends StatefulWidget {
   final List<String> productImages;
   final String productPrice;
   final String productBrand;
-  final double productRating;
-  final int ratingCount;
   final String productSp;
 
   const ProductDetails({
@@ -28,8 +31,6 @@ class ProductDetails extends StatefulWidget {
     required this.productImages,
     required this.productPrice,
     required this.productBrand,
-    required this.productRating,
-    required this.ratingCount,
     required this.productId,
     required this.productSp,
   }) : super(key: key);
@@ -47,6 +48,8 @@ class _ProductDetailsState extends State<ProductDetails> {
   bool isLoading = false;
 
   final TextEditingController _emailController = TextEditingController();
+  final cartManager = Get.put(CartManager(), permanent: true);
+  final storage = GetStorage();
 
   int _currentImageIndex = 0;
   String productDescription = "";
@@ -69,7 +72,7 @@ class _ProductDetailsState extends State<ProductDetails> {
             orElse: () => null,
           );
 
-          if (product != null) {
+          if (product != null && mounted) {
             setState(() {
               productDescription =
                   product['description'] ?? "No description available.";
@@ -81,16 +84,20 @@ class _ProductDetailsState extends State<ProductDetails> {
     } catch (e) {
       print("Error fetching product description: $e");
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> navigateToCheckout() async {
-    setState(() {
-      isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+      });
+    }
 
     try {
       final response = await http
@@ -118,16 +125,18 @@ class _ProductDetailsState extends State<ProductDetails> {
             print("Extracted deliveryCharges: $deliveryCharges");
             print("Extracted codCharges: $codCharges");
 
-            Get.to(() => CheckoutScreen(
-                  productId: widget.productId,
-                  productName: widget.productName,
-                  productImage: widget.productImages.isNotEmpty
-                      ? widget.productImages.first
-                      : 'https://via.placeholder.com/150',
-                  productPrice: double.tryParse(widget.productSp) ?? 0.0,
-                  productRating: widget.productRating,
-                  deliveryCharges: deliveryCharges,
-                  codCharges: codCharges,
+            Get.to(() => UnifiedCheckoutScreen(
+                  isSingleProduct: true,
+                  singleItem: CartItem(
+                    brand: widget.productBrand,
+                    productId: widget.productId,
+                    name: widget.productName,
+                    images: widget.productImages,
+                    price: double.tryParse(widget.productSp) ?? 0.0,
+                    quantity: 1,
+                  ),
+                  deliveryChargeOverride: deliveryCharges,
+                  codChargeOverride: codCharges,
                 ));
           } else {
             print(
@@ -142,10 +151,16 @@ class _ProductDetailsState extends State<ProductDetails> {
     } catch (e) {
       print("Error fetching delivery/cod charges: $e");
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = true;
+        });
+      }
     }
+  }
+
+  String cleanHtml(String html) {
+    return html.replaceAll('<p><br></p>', '').trim();
   }
 
   @override
@@ -157,7 +172,8 @@ class _ProductDetailsState extends State<ProductDetails> {
   @override
   Widget build(BuildContext context) {
     final CartController cartController = Get.find<CartController>();
-
+    final GuestCartController guestCartController =
+        Get.find<GuestCartController>();
     return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -177,6 +193,54 @@ class _ProductDetailsState extends State<ProductDetails> {
               size: 26,
             ),
           ),
+          actions: [
+            Obx(() {
+              //final cartManager = Get.find<CartManager>();
+              final count = cartController.storage.read("userId") != null
+                  ? cartController.itemCount
+                  : guestCartController.itemCount;
+
+              return Stack(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Get.to(() => CartPage());
+                    },
+                    icon: Icon(
+                      Icons.shopping_cart,
+                      size: 26,
+                    ),
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$count',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }),
+          ],
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -311,6 +375,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                     ),
                     SizedBox(height: 16),
 
+                    // Product Details Section
                     Text(
                       'Product Details',
                       style: TextStyle(
@@ -318,11 +383,26 @@ class _ProductDetailsState extends State<ProductDetails> {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+
                     isLoading
-                        ? Center(child: CircularProgressIndicator())
+                        ? Shimmer.fromColors(
+                            baseColor: Colors.grey[300]!,
+                            highlightColor: Colors.grey[100]!,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: List.generate(3, (index) {
+                                return Container(
+                                  margin: EdgeInsets.symmetric(vertical: 6),
+                                  height: 16,
+                                  width: double.infinity,
+                                  color: Colors.white,
+                                );
+                              }),
+                            ),
+                          )
                         : productDescription.isNotEmpty
                             ? Html(
-                                data: productDescription,
+                                data: cleanHtml(productDescription),
                                 style: {
                                   "p": Style(fontSize: FontSize(16)),
                                   "b": Style(fontWeight: FontWeight.bold),
@@ -335,106 +415,6 @@ class _ProductDetailsState extends State<ProductDetails> {
                                     TextStyle(fontSize: 16, color: Colors.grey),
                               ),
 
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Color.fromRGBO(90, 97, 255, 0.06),
-                            side: BorderSide(
-                              color: Color.fromRGBO(90, 97, 255, 0.25),
-                              width: 1.0,
-                            ),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                            padding: EdgeInsets.symmetric(
-                                vertical: 6, horizontal: 4),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.location_pin,
-                                size: 18,
-                                color: const Color.fromRGBO(90, 97, 255, 1),
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Nearest Store',
-                                style: TextStyle(
-                                    fontSize: 14,
-                                    color:
-                                        const Color.fromRGBO(90, 97, 255, 1)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Color.fromRGBO(251, 137, 4, 0.22),
-                            side: BorderSide(
-                              color: Color.fromRGBO(251, 137, 4, 0.22),
-                              width: 1.0,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              vertical: 6,
-                              horizontal: 4,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.lock_outline_rounded,
-                                color: Color.fromRGBO(251, 137, 4, 1),
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'VIP',
-                                style: TextStyle(
-                                    color: Color.fromRGBO(251, 137, 4, 1)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        ElevatedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: Color.fromRGBO(197, 84, 146, 0.4),
-                              width: 1.0,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                                vertical: 6, horizontal: 4),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.history_rounded,
-                                color: Color.fromRGBO(197, 84, 146, 1),
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                'Return Policy',
-                                style: TextStyle(
-                                    color: Color.fromRGBO(197, 84, 146, 1)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-
                     SizedBox(height: 20),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,26 +426,40 @@ class _ProductDetailsState extends State<ProductDetails> {
                           children: [
                             ElevatedButton(
                               onPressed: () {
-                                // CartItem cartItem = CartItem(
-                                //   productId: widget.,
-                                //   name: widget.productName,
-                                //   price: double.parse(widget.productPrice),
-                                //   quantity: 1,
-                                //   image: widget.productImages.isNotEmpty
-                                //       ? widget.productImages.first
-                                //       : 'https://via.placeholder.com/150',
-                                //   brand: widget.productBrand,
-                                //   rating: widget.productRating,
-                                // );
-                                // // String rating = double.parse(productRating).toString();
-                                // String price = double.parse(widget.productPrice)
-                                //     .toString();
-                                // int quantity = 1;
-                                cartController.addItem(widget.productId);
+                                final isLoggedIn =
+                                    storage.read("userId") != null;
+
+                                if (isLoggedIn) {
+                                  cartController.addItem(widget
+                                      .productId); // CartController only needs productId
+                                } else {
+                                  guestCartController.addToCart(
+                                    CartItem(
+                                      productId: widget.productId,
+                                      name: widget.productName,
+                                      price: double.tryParse(
+                                              widget.productPrice) ??
+                                          0.0,
+                                      quantity: 1,
+                                      images: widget.productImages,
+                                      brand: widget.productBrand,
+                                    ),
+                                  );
+                                }
+                                Get.snackbar(
+                                  "Item Added",
+                                  "${widget.productName} has been added to your cart.",
+                                  snackPosition: SnackPosition.TOP,
+                                  backgroundColor:
+                                      Colors.green.withOpacity(0.7),
+                                  colorText: Colors.white,
+                                  margin: EdgeInsets.all(12),
+                                  borderRadius: 8,
+                                  duration: Duration(seconds: 2),
+                                );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    Colors.grey.shade900, // Button color
+                                backgroundColor: Colors.grey.shade900,
                                 padding: EdgeInsets.symmetric(
                                     horizontal: 18, vertical: 18),
                                 shape: RoundedRectangleBorder(
@@ -475,16 +469,19 @@ class _ProductDetailsState extends State<ProductDetails> {
                               child: Text(
                                 "ADD TO CART",
                                 style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                             SizedBox(height: 10),
                             ElevatedButton(
-                              onPressed: () {
-                                navigateToCheckout();
-                              }, // Disable button if conditions aren't met
+                              onPressed: isLoading
+                                  ? null
+                                  : () {
+                                      navigateToCheckout();
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
                                     Color.fromRGBO(185, 28, 28, 1.0),
@@ -498,12 +495,6 @@ class _ProductDetailsState extends State<ProductDetails> {
                                   ? const SizedBox(
                                       width: 24,
                                       height: 24,
-                                      child: CircularProgressIndicator(
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                                Colors.white),
-                                        strokeWidth: 2,
-                                      ),
                                     )
                                   : Text(
                                       "PROCEED TO PAYMENT",

@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  get: ^4.6.5  
+  get: ^4.7.2  
   smooth_page_indicator: ^1.2.0+3
   flutter_svg: ^2.0.16
   google_nav_bar: ^5.0.7
@@ -23,6 +23,7 @@ dependencies:
   shimmer: ^3.0.0
   flutter_html: ^3.0.0-beta.2
   flutter_launcher_icons: ^0.14.3
+  intl: ^0.20.2
 
   
 
@@ -35,6 +36,7 @@ flutter:
   uses-material-design: true
   assets:
     - lib/assets/
+    
 flutter_icons:
   android: true
   ios: true

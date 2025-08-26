@@ -59,11 +59,9 @@ class _CategoryListSectionState extends State<CategoryListSection>
 
           carModels = allModels
               .where((model) => model['typeId']['name'] == 'Car')
-              .take(5)
               .toList();
           bikeModels = allModels
               .where((model) => model['typeId']['name'] == 'Bike')
-              .take(5)
               .toList();
         }
       }
@@ -133,13 +131,20 @@ class _CategoryListSectionState extends State<CategoryListSection>
         TabBar(
           controller: _tabController,
           tabs: [
-            Tab(text: "Cars"),
-            Tab(text: "Bikes"),
+            Tab(text: "CARS"),
+            Tab(text: "BIKES"),
           ],
-          labelColor: Colors.black,
-          indicatorColor: Color.fromRGBO(185, 28, 28, 1.0),
+          labelColor: Color.fromRGBO(185, 28, 28, 1.0),
+          unselectedLabelColor: Colors.black,
+          labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          indicator: UnderlineTabIndicator(
+            borderSide: BorderSide(
+              color: Color.fromRGBO(185, 28, 28, 1.0),
+              width: 3,
+            ),
+          ),
         ),
-        SizedBox(height: 8),
+        SizedBox(height: 10),
         Container(
           height: 300,
           child: isModelLoading
@@ -160,41 +165,86 @@ class _CategoryListSectionState extends State<CategoryListSection>
     if (models.isEmpty) {
       return Center(child: Text("No models available"));
     }
-    return ListView.builder(
+    return GridView.builder(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.9,
+      ),
       itemCount: models.length,
       itemBuilder: (context, index) {
         var model = models[index];
         return GestureDetector(
           onTap: () => navigateToProducts(model['_id'], model['name']),
-          child: Card(
-            elevation: 3,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: ListTile(
-              leading: model['mediaId'] != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        model['mediaId']['url'],
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.scaleDown,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Icon(Icons.image_not_supported, size: 50),
-                      ),
-                    )
-                  : Icon(Icons.image_not_supported, size: 50),
-              title: Text(
-                model['name'],
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                model['brandId']['name'],
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-              trailing:
-                  Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  flex: 6,
+                  child: ClipRRect(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(15)),
+                    child: model['mediaId'] != null
+                        ? Image.network(
+                            model['mediaId']['url'],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                                Icons.image_not_supported,
+                                size: 60,
+                                color: Colors.grey),
+                          )
+                        : Icon(Icons.image_not_supported,
+                            size: 60, color: Colors.grey),
+                  ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          model['name'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          model['brandId']['name'],
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );

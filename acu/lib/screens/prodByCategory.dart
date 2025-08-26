@@ -147,8 +147,6 @@ class ProductCard extends StatelessWidget {
               productImages: productImages,
               productPrice: productPrice.toString(),
               productBrand: productBrand,
-              productRating: 0.0,
-              ratingCount: 0,
               productSp: productSp.toString(),
             ));
       },

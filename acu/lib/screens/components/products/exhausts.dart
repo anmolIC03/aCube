@@ -73,97 +73,24 @@ class _ExhaustsState extends State<Exhausts> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       body: Column(
         children: [
           _buildExhaustTypeSelector(),
           Expanded(
             child: Obx(() {
               if (isLoading.value) {
-                return _buildShimmerList(); // ✅ Shimmer loading effect
-              } else if (filteredProducts.isEmpty) {
-                return const Center(child: Text("No products found"));
-              } else {
-                return ListView.builder(
-                  padding: const EdgeInsets.all(8),
-                  itemCount: filteredProducts.length,
-                  itemBuilder: (context, index) {
-                    final product = filteredProducts[index];
-                    List<String> productImages = (product['image'] is List &&
-                            product['image'].isNotEmpty)
-                        ? product['image']
-                            .map<String>((img) => img['url'].toString())
-                            .toList()
-                        : ['https://via.placeholder.com/150'];
-
-                    String imageUrl = productImages.first;
-                    return GestureDetector(
-                      onTap: () {
-                        Get.to(() => ProductDetails(
-                              productName: product['name'] ?? 'Unknown Product',
-                              productBrand: (product['brand'] is List &&
-                                      product['brand'].isNotEmpty)
-                                  ? product['brand'][0]['name'].toString()
-                                  : 'Unknown Brand',
-                              productId: product['_id'] ?? '',
-                              productImages: productImages,
-                              productPrice:
-                                  product['price']?.toString() ?? 'N/A',
-                              productRating: product['rating'] ?? 0.0,
-                              ratingCount: product['ratingCount'] ?? 0,
-                              productSp: product['sp']?.toString() ?? 'N/A',
-                            ));
-                      },
-                      child: Card(
-                        elevation: 4,
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  imageUrl,
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      product['name'] ?? "Unknown Product",
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      "₹${product['sp'] ?? "N/A"}",
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Color.fromRGBO(185, 28, 28, 1.0),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                return _buildShimmerList();
+              }
+              if (filteredProducts.isEmpty) {
+                return const Center(
+                  child: Text(
+                    "No products found",
+                    style: TextStyle(fontSize: 16, color: Colors.black54),
+                  ),
                 );
               }
+              return _buildProductList();
             }),
           ),
         ],
@@ -172,77 +99,171 @@ class _ExhaustsState extends State<Exhausts> {
   }
 
   Widget _buildExhaustTypeSelector() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Obx(() {
-        return Row(
-          children: exhaustTypes.map((exhaust) {
-            bool isSelected = selectedExhaust.value == exhaust;
-
-            return GestureDetector(
-              onTap: () {
-                selectedExhaust.value = exhaust;
-                filterProducts(exhaust);
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isSelected
-                          ? Color.fromRGBO(185, 28, 28, 1.0)
-                          : Colors.transparent,
-                      width: 3,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      color: Colors.white,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Obx(() {
+          return Row(
+            children: exhaustTypes.map((exhaust) {
+              bool isSelected = selectedExhaust.value == exhaust;
+              return GestureDetector(
+                onTap: () {
+                  selectedExhaust.value = exhaust;
+                  filterProducts(exhaust);
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color.fromRGBO(185, 28, 28, 1.0)
+                        : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.2),
+                              blurRadius: 5,
+                              offset: const Offset(0, 3),
+                            )
+                          ]
+                        : [],
+                  ),
+                  child: Text(
+                    exhaust,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? Colors.white : Colors.black87,
                     ),
                   ),
                 ),
-                child: Text(
-                  exhaust,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected
-                        ? Color.fromRGBO(185, 28, 28, 1.0)
-                        : Colors.black,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        );
-      }),
+              );
+            }).toList(),
+          );
+        }),
+      ),
     );
   }
 
-  /// Shimmer loading effect for skeleton UI
-  Widget _buildShimmerList() {
+  Widget _buildProductList() {
     return ListView.builder(
-      padding: const EdgeInsets.all(8),
-      itemCount: 5, // Show 5 shimmer placeholders
+      padding: const EdgeInsets.all(12),
+      itemCount: filteredProducts.length,
       itemBuilder: (context, index) {
-        return Card(
-          elevation: 4,
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
+        final product = filteredProducts[index];
+        List<String> productImages =
+            (product['image'] is List && product['image'].isNotEmpty)
+                ? product['image']
+                    .map<String>((img) => img['url'].toString())
+                    .toList()
+                : ['https://via.placeholder.com/150'];
+
+        String imageUrl = productImages.first;
+
+        return GestureDetector(
+          onTap: () {
+            Get.to(() => ProductDetails(
+                  productName: product['name'] ?? 'Unknown Product',
+                  productBrand:
+                      (product['brand'] is List && product['brand'].isNotEmpty)
+                          ? product['brand'][0]['name'].toString()
+                          : 'Unknown Brand',
+                  productId: product['_id'] ?? '',
+                  productImages: productImages,
+                  productPrice: product['price']?.toString() ?? 'N/A',
+                  productSp: product['sp']?.toString() ?? 'N/A',
+                ));
+          },
+          child: Card(
+            elevation: 2,
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: Row(
               children: [
-                Shimmer.fromColors(
-                  baseColor: Colors.grey[300]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.white,
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(14),
+                      bottomLeft: Radius.circular(14)),
+                  child: Image.network(
+                    imageUrl,
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.scaleDown,
                   ),
                 ),
-                const SizedBox(width: 12),
                 Expanded(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product['name'] ?? "Unknown Product",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "₹${product['sp'] ?? "N/A"}",
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Color.fromRGBO(185, 28, 28, 1.0),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildShimmerList() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(14),
+                      bottomLeft: Radius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -250,17 +271,17 @@ class _ExhaustsState extends State<Exhausts> {
                         baseColor: Colors.grey[300]!,
                         highlightColor: Colors.grey[100]!,
                         child: Container(
-                          height: 20,
-                          width: 150,
+                          height: 16,
+                          width: 140,
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 6),
                       Shimmer.fromColors(
                         baseColor: Colors.grey[300]!,
                         highlightColor: Colors.grey[100]!,
                         child: Container(
-                          height: 16,
+                          height: 14,
                           width: 100,
                           color: Colors.white,
                         ),
@@ -268,8 +289,8 @@ class _ExhaustsState extends State<Exhausts> {
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },

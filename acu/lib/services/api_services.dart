@@ -160,7 +160,7 @@ class CategoryApiService {
         return false;
       }).toList();
 
-      // ✅ Pagination Logic
+      //  Pagination Logic
       int startIndex = (page - 1) * limit;
       int endIndex = startIndex + limit;
 
@@ -193,7 +193,7 @@ class CategoryApiService {
         final jsonData = jsonDecode(response.body);
 
         if (jsonData.containsKey('data') && jsonData['data'] is List) {
-          // ✅ Filter elements by categoryId
+          //  Filter elements by categoryId
           List<Map<String, dynamic>> elements = (jsonData['data'] as List)
               .where((item) =>
                   item["categoryId"]?["_id"] == categoryId) // ✅ Filter

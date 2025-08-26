@@ -17,115 +17,143 @@ class CartController extends GetxController {
     super.onInit();
   }
 
-  /// ✅ Fetch Cart from Backend
-  void fetchCart() async {
+  Future<void> fetchCart() async {
     final userId = storage.read("userId");
 
     if (userId == null) {
-      Get.snackbar("Error", "User ID not found. Please log in again.");
+      List<dynamic> guestCart = storage.read('guestCart') ?? [];
+      cartItems.assignAll(guestCart.map((e) => CartItem.fromJson(e)).toList());
+      cartItems.refresh();
+      print("Guest cart loaded: ${cartItems.length} items");
       return;
     }
 
     final url = Uri.parse("$apiBaseUrl/all/?userId=$userId");
 
     try {
-      final response =
-          await http.get(url, headers: {"Content-Type": "application/json"});
-
-      print("Cart Response Status: ${response.statusCode}");
-      print("Cart Response Body: ${response.body}");
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData["success"] == true) {
-          final cartData = responseData["data"];
-          final List products = cartData["products"];
-
-          if (products.isNotEmpty) {
-            cartItems.assignAll(
-                products.map((item) => CartItem.fromJson(item)).toList());
-          } else {
-            cartItems.clear();
-          }
-
-          print("Cart Items Count: ${cartItems.length}");
-          cartItems.refresh(); // Notify UI of changes
-        }
-      } else {
-        Get.snackbar("Error", "Failed to fetch cart");
-      }
-    } catch (e) {
-      print("Exception: $e");
-      Get.snackbar("Error", "Something went wrong while fetching the cart");
-    }
-  }
-
-  /// ✅ Add Product to Cart
-  Future<void> addItem(String productId) async {
-    final userId = GetStorage().read("userId");
-    if (userId == null) return;
-
-    isLoading.value = true; // Show loader
-
-    // 🔥 Check if item is already in cart
-    int index = cartItems.indexWhere((item) => item.productId == productId);
-    if (index != -1) {
-      cartItems[index] =
-          cartItems[index].copyWith(quantity: cartItems[index].quantity + 1);
-      cartItems.refresh(); // 🔥 Update UI immediately
-    } else {
-      cartItems.add(CartItem(
-        productId: productId,
-        name: "", // Placeholder (fetchCart() will update real values)
-        price: 0,
-        quantity: 1,
-        images: [],
-        brand: "",
-      ));
-      cartItems.refresh(); // 🔥 Update UI immediately
-    }
-
-    final body =
-        json.encode({"userId": userId, "productId": productId, "quantity": 1});
-
-    try {
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/add'),
-        body: body,
+      final response = await http.get(
+        url,
         headers: {"Content-Type": "application/json"},
       );
 
       if (response.statusCode == 200) {
-        fetchCart(); // ✅ Fetch latest cart data from backend
+        final responseData = jsonDecode(response.body);
+        if (responseData["success"] == true) {
+          final List products = responseData["data"]["products"];
+          cartItems.assignAll(
+              products.map((item) => CartItem.fromJson(item)).toList());
+          cartItems.refresh();
+          print("Fetched cart: ${cartItems.length} items");
+        } else {
+          print("Backend responded with success: false");
+        }
       } else {
-        print("Error: ${response.body}");
+        print(
+            "Failed to fetch cart: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      print('Error adding item to cart: $e');
-    } finally {
-      isLoading.value = false; // Hide loader
+      print("Exception during fetchCart: $e");
     }
+  }
+
+  Future<void> addItem(String productId) async {
+    final userId = storage.read("userId");
+
+    isLoading.value = true;
+
+    if (userId == null) {
+      _addToLocalCart(productId);
+      isLoading.value = false;
+      return;
+    }
+
+    int index = cartItems.indexWhere((item) => item.productId == productId);
+
+    if (index != -1) {
+      final newQty = cartItems[index].quantity + 1;
+      await updateQuantity(productId, newQty);
+    } else {
+      final body = json.encode({
+        "userId": userId,
+        "productId": productId,
+        "quantity": 1,
+      });
+
+      try {
+        final response = await http.post(
+          Uri.parse('$apiBaseUrl/add'),
+          body: body,
+          headers: {"Content-Type": "application/json"},
+        );
+
+        print("Add Item Response: ${response.statusCode} - ${response.body}");
+
+        if (response.statusCode == 201) {
+          await fetchCart();
+        } else {
+          print("Error adding item: ${response.body}");
+        }
+      } catch (e) {
+        print('Error adding item to cart: $e');
+      }
+    }
+
+    isLoading.value = false;
+  }
+
+  void _addToLocalCart(String productId) {
+    List<dynamic> guestCart = storage.read('guestCart') ?? [];
+
+    int index = guestCart.indexWhere((item) => item['productId'] == productId);
+    if (index != -1) {
+      guestCart[index]['quantity'] += 1;
+    } else {
+      guestCart.add({
+        'productId': productId,
+        'name': '',
+        'price': 0,
+        'quantity': 1,
+        'images': [],
+        'brand': '',
+      });
+    }
+
+    storage.write('guestCart', guestCart);
+    cartItems.assignAll(guestCart.map((e) => CartItem.fromJson(e)).toList());
+    cartItems.refresh();
   }
 
   Future<void> updateQuantity(String productId, int quantity) async {
     final userId = storage.read("userId");
     if (userId == null) return;
 
+    final body = json.encode({
+      "userId": userId,
+      "productId": productId,
+      "quantity": quantity,
+    });
+
     try {
       final response = await http.patch(
         Uri.parse('$apiBaseUrl/update'),
-        body: json.encode(
-            {"userId": userId, "productId": productId, "quantity": quantity}),
+        body: body,
         headers: {"Content-Type": "application/json"},
       );
 
+      print(
+          "Update Quantity Response: ${response.statusCode} - ${response.body}");
+
       if (response.statusCode == 200) {
+        // Update local list too
         int index = cartItems.indexWhere((item) => item.productId == productId);
         if (index != -1) {
           cartItems[index] = cartItems[index].copyWith(quantity: quantity);
           cartItems.refresh();
         }
-        fetchCart(); // ✅ Ensure updated values from backend
+
+        await fetchCart(); // Ensure consistency with backend
+      } else {
+        print("Failed to update cart quantity: ${response.body}");
       }
     } catch (e) {
       print('Error updating cart item: $e');
@@ -136,17 +164,22 @@ class CartController extends GetxController {
     final userId = storage.read("userId");
     if (userId == null) return;
 
+    final body = json.encode({
+      "userId": userId,
+      "productId": productId,
+    });
+
     try {
       final response = await http.patch(
         Uri.parse('$apiBaseUrl/remove'),
-        body: json.encode({"userId": userId, "productId": productId}),
+        body: body,
         headers: {"Content-Type": "application/json"},
       );
 
       print("Remove Item Response: ${response.statusCode} - ${response.body}");
 
       if (response.statusCode == 200) {
-        fetchCart(); // ✅ Fetch updated cart after removal
+        await fetchCart();
       } else {
         Get.snackbar("Error", "Failed to remove item from cart");
       }
@@ -156,9 +189,8 @@ class CartController extends GetxController {
     }
   }
 
-  /// ✅ Clear Entire Cart
   Future<void> clearCart() async {
-    final userId = GetStorage().read("userId");
+    final userId = storage.read("userId");
     if (userId == null) return;
 
     try {
@@ -168,19 +200,19 @@ class CartController extends GetxController {
         headers: {"Content-Type": "application/json"},
       );
 
+      print("Clear Cart Response: ${response.statusCode} - ${response.body}");
+
       if (response.statusCode == 200) {
         cartItems.clear();
-        cartItems.refresh(); // ✅ Notify UI of changes
+        cartItems.refresh();
       }
     } catch (e) {
       print('Error clearing cart: $e');
     }
   }
 
-  /// ✅ Calculate Total Item Count
   int get itemCount => cartItems.fold(0, (sum, item) => sum + item.quantity);
 
-  /// ✅ Calculate Total Cart Price
   double get totalPrice =>
       cartItems.fold(0.0, (sum, item) => sum + item.price * item.quantity);
 }

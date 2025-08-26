@@ -1,3 +1,4 @@
+import 'package:acu/screens/dummy.dart';
 import 'package:acu/screens/productByType.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/drawer_screen.dart';
@@ -6,7 +7,6 @@ import 'package:acu/screens/components/wishlist_controller.dart';
 import 'package:acu/screens/home.dart';
 import 'package:acu/screens/login_page.dart';
 import 'package:acu/screens/signup_page.dart';
-import 'package:acu/screens/splas.dart';
 import 'package:acu/screens/view_all.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -14,7 +14,7 @@ import 'package:get_storage/get_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await GetStorage.init(); // Initialize GetStorage before using it
+  await GetStorage.init();
   runApp(const MainApp());
 }
 
@@ -35,16 +35,16 @@ class _MainAppState extends State<MainApp> {
     Get.put(CartController());
   }
 
-  Widget getInitialScreen() {
-    bool isLoggedIn = storage.read("isLoggedIn") ?? false;
-    return isLoggedIn ? HiddenDrawer() : OnboardingScreen();
-  }
+  // Widget getInitialScreen() {
+  //   bool isLoggedIn = storage.read("isLoggedIn") ?? false;
+  //   return isLoggedIn ? HiddenDrawer() : OnboardingScreen();
+  // }
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      home: getInitialScreen(),
+      home: HiddenDrawer(),
     );
   }
 }

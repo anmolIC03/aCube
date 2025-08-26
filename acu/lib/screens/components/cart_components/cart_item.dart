@@ -15,7 +15,6 @@ class CartItem {
     required this.brand,
   });
 
-  /// ✅ Properly handles list fields
   CartItem copyWith({
     String? productId,
     String? name,
@@ -35,23 +34,31 @@ class CartItem {
   }
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
+    final id = json['_id'] ?? json['productId'] ?? '';
+    final imagesRaw = json['image'] ?? json['images'] ?? [];
+    final brandRaw = json['brand'];
+
     return CartItem(
-      productId: json['_id'] as String,
-      name: json['name'] as String,
-      images: json['image'] is List
-          ? List<String>.from(json['image'])
-          : [json['image'].toString()],
-      price: (json['sp'] as num).toDouble(),
-      quantity: json['quantity'] as int,
-      brand: json['brand'] is List
-          ? (json['brand'] as List).map((b) => b['name']).join(', ')
-          : json['brand'].toString(),
+      productId: id.toString(),
+      name: json['name']?.toString() ?? '',
+      images: imagesRaw is List
+          ? List<String>.from(imagesRaw.map((e) => e.toString()))
+          : [imagesRaw?.toString() ?? ''],
+      price: (json['sp'] != null)
+          ? (json['sp'] as num).toDouble()
+          : (json['price'] != null)
+              ? (json['price'] as num).toDouble()
+              : 0.0,
+      quantity: json['quantity'] is int ? json['quantity'] : 1,
+      brand: brandRaw is List
+          ? (brandRaw as List).map((b) => b['name']).join(', ')
+          : brandRaw?.toString() ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'product_id': productId,
+      'productId': productId,
       'name': name,
       'image': images,
       'price': price,

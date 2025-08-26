@@ -8,7 +8,6 @@ class OrderConfirmScreen extends StatefulWidget {
   final String productName;
   final String productImage;
   final double productPrice;
-  final double productRating;
   final double deliveryCharges;
   final double codCharges;
   final String addressId;
@@ -20,7 +19,6 @@ class OrderConfirmScreen extends StatefulWidget {
     required this.productName,
     required this.productImage,
     required this.productPrice,
-    required this.productRating,
     required this.deliveryCharges,
     required this.codCharges,
     required this.addressId,
@@ -123,8 +121,6 @@ class _OrderConfirmScreenState extends State<OrderConfirmScreen> {
                                       const Icon(Icons.star,
                                           color: Colors.orange, size: 18),
                                       const SizedBox(width: 4),
-                                      Text("${widget.productRating}",
-                                          style: const TextStyle(fontSize: 16)),
                                     ],
                                   ),
                                 ],
@@ -329,8 +325,7 @@ class _OrderConfirmScreenState extends State<OrderConfirmScreen> {
                 textAlign: TextAlign.center,
                 text: TextSpan(
                   style: const TextStyle(fontSize: 15, color: Colors.black),
-                  children: _formatAmountWithColor(
-                      subtitle), // ✅ Apply color formatting
+                  children: _formatAmountWithColor(subtitle),
                 ),
               ),
             ],

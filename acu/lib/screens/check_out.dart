@@ -11,7 +11,6 @@ class CheckoutScreen extends StatefulWidget {
   final String productName;
   final String productImage;
   final double productPrice;
-  final double productRating;
   final double deliveryCharges;
   final double codCharges;
 
@@ -20,7 +19,6 @@ class CheckoutScreen extends StatefulWidget {
     required this.productName,
     required this.productImage,
     required this.productPrice,
-    required this.productRating,
     required this.deliveryCharges,
     required this.codCharges,
     required this.productId,
@@ -256,7 +254,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   productName: widget.productName,
                   productImage: widget.productImage,
                   productPrice: widget.productPrice,
-                  productRating: widget.productRating,
                   deliveryCharges: widget.deliveryCharges,
                   codCharges: widget.codCharges,
                   productId: widget.productId,

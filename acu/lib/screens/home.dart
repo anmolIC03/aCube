@@ -1,4 +1,6 @@
 import 'package:acu/models/product_models.dart';
+import 'package:acu/screens/components/cart_components/cart_manager.dart';
+import 'package:acu/screens/components/cart_components/guestCartController.dart';
 import 'package:acu/screens/productByType.dart';
 import 'package:acu/screens/cart_page.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
@@ -6,7 +8,6 @@ import 'package:acu/screens/components/cart_components/cart_item.dart';
 import 'package:acu/screens/components/category_card.dart';
 import 'package:acu/screens/components/category_list.dart';
 import 'package:acu/screens/components/home_controller.dart';
-import 'package:acu/screens/components/products/rating_list.dart';
 import 'package:acu/screens/components/wishlist_controller.dart';
 import 'package:acu/screens/prodByCategory.dart';
 import 'package:acu/screens/prod_details.dart';
@@ -16,7 +17,9 @@ import 'package:acu/screens/wishlist.dart';
 import 'package:acu/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:shimmer/shimmer.dart';
 
 import 'components/cart_components/product_components/prodList.dart';
 
@@ -35,13 +38,15 @@ class _HomeScreenState extends State<HomeScreen> {
   var isLoading = false.obs;
   var searchQuery = ''.obs;
   var filteredProducts = <dynamic>[].obs;
-  final RxInt selectIndex = 0.obs; // Default selected tab (Home)
+  final RxInt selectIndex = 0.obs; // home tab is 0
 
   @override
   void initState() {
     super.initState();
     fetchElements();
-    Get.find<CartController>().fetchCart();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.find<CartController>().fetchCart();
+    });
 
     ever(homeController.productList, (_) {
       filteredProducts.assignAll(homeController.productList);
@@ -50,6 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       filteredProducts.assignAll(homeController.productList);
     });
+    Get.put(GuestCartController());
+    Get.put(CartManager());
   }
 
   void filterProducts() {
@@ -133,6 +140,8 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Search Bar
+                SizedBox(height: 12),
+
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: GestureDetector(
@@ -309,7 +318,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Obx(() {
                     if (homeController.isLoading.value) {
-                      return Center(child: CircularProgressIndicator());
+                      return SizedBox(
+                        height: 410,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: 5, // Number of shimmer placeholders
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 22.0),
+                              child: buildProductCardShimmer(),
+                            );
+                          },
+                        ),
+                      );
                     } else if (homeController.productList.isEmpty) {
                       return Center(child: Text('No products found'));
                     } else {
@@ -330,8 +351,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                         productImages: product.images,
                                         productPrice: product.price.toString(),
                                         productBrand: product.brand,
-                                        productRating: product.rating,
-                                        ratingCount: product.ratingCount,
                                         productSp: product.sp.toString(),
                                       ));
                                 },
@@ -365,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Positioned.fill(
                         child: Opacity(
-                          opacity: 0.1, // Adjust opacity to make it light
+                          opacity: 0.1,
                           child: Center(
                             child: Icon(
                               Icons.settings,
@@ -502,6 +521,54 @@ class _HomeScreenState extends State<HomeScreen> {
                   GButton(
                     icon: Icons.shopping_cart,
                     text: 'Cart',
+                    leading: Obx(() {
+                      final cartController = Get.find<CartController>();
+                      final guestCartController =
+                          Get.find<GuestCartController>();
+                      final userId =
+                          GetStorage().read("userId"); // null = guest
+
+                      // Decide which cart list to use
+                      final cartItems = userId == null
+                          ? guestCartController.cartItems
+                          : cartController.cartItems;
+
+                      final count = cartItems.fold<int>(
+                          0, (sum, item) => sum + item.quantity);
+
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(Icons.shopping_cart),
+                          if (count > 0)
+                            Positioned(
+                              right: -6,
+                              top: -4,
+                              child: Container(
+                                padding: EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: BoxConstraints(
+                                  minWidth: 18,
+                                  minHeight: 18,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '$count',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
                   ),
                   GButton(
                     icon: Icons.search,
@@ -575,12 +642,83 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProductCard(Product product) {
-    final CartController cartController = Get.find<CartController>();
-    final wishlistController = Get.find<WishlistController>();
+  Widget buildProductCardShimmer() {
+    return Container(
+      width: 300,
+      height: 320,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: Container(
+              height: 210,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                color: Colors.grey[300],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    height: 20,
+                    width: 180,
+                    color: Colors.grey[300],
+                  ),
+                ),
+                SizedBox(height: 8),
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    height: 16,
+                    width: 120,
+                    color: Colors.grey[300],
+                  ),
+                ),
+                SizedBox(height: 16),
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: Container(
+                    height: 20,
+                    width: 80,
+                    color: Colors.grey[300],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-    // Wishlist controller or list
-    final wishlist = <CartItem>[].obs;
+  Widget _buildProductCard(Product product) {
+    final cartController = Get.find<CartController>();
+    final guestCartController = Get.find<GuestCartController>();
+    final wishlistController = Get.find<WishlistController>();
+    final userId = GetStorage().read("userId"); // null = guest
+    final cartManager = Get.find<CartManager>();
 
     return Container(
       width: 300,
@@ -614,40 +752,39 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Positioned(
-                top: 10,
-                right: 10,
-                child: Obx(() {
-                  final isInWishlist = wishlistController.wishlist
-                      .any((item) => item.name == product.name);
-                  return IconButton(
-                    icon: Icon(
-                      isInWishlist ? Icons.favorite : Icons.favorite_border,
-                      color: isInWishlist ? Colors.red : Colors.grey,
-                    ),
-                    onPressed: () {
-                      if (isInWishlist) {
-                        wishlistController.removeFromWishlist(product.name);
-                        Get.snackbar('Removed from Wishlist', product.name);
-                      } else {
-                        // Add to wishlist
-                        wishlistController.addToWishlist(
-                          CartItem(
-                            productId: product.id,
-                            name: product.name,
-                            price: product.sp,
-                            quantity: 1,
-                            images: product.images.isNotEmpty
-                                ? product.images
-                                : ['https://via.placeholder.com/150'],
-                            brand: product.brand,
-                          ),
-                        );
-                        Get.snackbar('Added to Wishlist', product.name);
-                      }
-                    },
-                  );
-                }),
-              ),
+                  top: 10,
+                  right: 10,
+                  child: Obx(() {
+                    final isInWishlist =
+                        wishlistController.isInWishlist(product.name);
+
+                    return IconButton(
+                      icon: Icon(
+                        isInWishlist ? Icons.favorite : Icons.favorite_border,
+                        color: isInWishlist ? Colors.red : Colors.grey,
+                      ),
+                      onPressed: () {
+                        if (isInWishlist) {
+                          wishlistController.removeFromWishlist(product.name);
+                          Get.snackbar('Removed from Wishlist', product.name);
+                        } else {
+                          wishlistController.addToWishlist(
+                            CartItem(
+                              productId: product.id,
+                              name: product.name,
+                              price: product.sp,
+                              quantity: 1,
+                              images: product.images.isNotEmpty
+                                  ? product.images
+                                  : ['https://via.placeholder.com/150'],
+                              brand: product.brand,
+                            ),
+                          );
+                          Get.snackbar('Added to Wishlist', product.name);
+                        }
+                      },
+                    );
+                  })),
             ],
           ),
           Padding(
@@ -665,10 +802,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 SizedBox(height: 4),
-                StarRating(
-                  rating: product.rating,
-                  ratingCount: product.ratingCount,
-                ),
                 Text(
                   product.brand,
                   style: TextStyle(
@@ -693,7 +826,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         SizedBox(height: 2),
-                        // Selling Price and Discount %
                         Row(
                           children: [
                             Text(
@@ -705,7 +837,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             SizedBox(width: 8),
-                            // Discount Percentage
                             Container(
                               padding: EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
@@ -726,64 +857,76 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    IconButton(
-                      icon: Obx(() {
-                        int quantity = cartController.cartItems
-                                .firstWhereOrNull(
-                                    (item) => item.productId == product.id)
-                                ?.quantity ??
-                            0;
+                    Obx(() {
+                      final cartItems = userId == null
+                          ? guestCartController.cartItems
+                          : cartController.cartItems;
 
-                        return quantity > 0
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.remove_circle,
-                                        size: 24, color: Colors.red),
-                                    onPressed: () {
+                      final item = cartItems
+                          .firstWhereOrNull((i) => i.productId == product.id);
+
+                      final quantity = item?.quantity ?? 0;
+
+                      return quantity > 0
+                          ? Row(
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.remove_circle,
+                                      size: 24, color: Colors.red),
+                                  onPressed: () {
+                                    if (userId == null) {
+                                      guestCartController.decrement(product.id);
+                                    } else {
                                       if (quantity > 1) {
                                         cartController.updateQuantity(
                                             product.id, quantity - 1);
                                       } else {
                                         cartController.removeItem(product.id);
                                       }
-                                    },
-                                  ),
-                                  Text(
-                                    quantity.toString(),
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.add_circle,
-                                        size: 24, color: Colors.green),
-                                    onPressed: () {
-                                      cartController.updateQuantity(
-                                          product.id, quantity + 1);
-                                    },
-                                  ),
-                                ],
-                              )
-                            : Center(
-                                child: IconButton(
-                                  icon: cartController.isLoading.value
-                                      ? CircularProgressIndicator()
-                                      : Icon(Icons.add_circle,
-                                          size: 34,
-                                          color:
-                                              Color.fromRGBO(251, 137, 4, 1)),
-                                  onPressed: () {
-                                    cartController.addItem(product.id);
+                                    }
                                   },
                                 ),
-                              );
-                      }),
-                      onPressed: () {
-                        cartController.addItem(product.id);
-                      },
-                    ),
+                                Text(
+                                  quantity.toString(),
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.add_circle,
+                                      size: 24, color: Colors.green),
+                                  onPressed: () {
+                                    if (userId == null) {
+                                      guestCartController.increment(product.id);
+                                    } else {
+                                      cartController.updateQuantity(
+                                          product.id, quantity + 1);
+                                    }
+                                  },
+                                ),
+                              ],
+                            )
+                          : IconButton(
+                              icon: Icon(Icons.add_circle,
+                                  size: 34, color: Color(0xFFFB8904)),
+                              onPressed: () {
+                                final newItem = CartItem(
+                                  productId: product.id,
+                                  name: product.name,
+                                  price: product.sp,
+                                  quantity: 1,
+                                  images: product.images,
+                                  brand: product.brand,
+                                );
+
+                                if (userId == null) {
+                                  guestCartController.addToCart(newItem);
+                                } else {
+                                  cartController.addItem(product.id);
+                                }
+                              },
+                            );
+                    }),
                   ],
                 ),
               ],
@@ -795,7 +938,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   int _calculateDiscount(double mrp, double sp) {
-    if (mrp <= sp) return 0; // No discount if selling price >= MRP
+    if (mrp <= sp) return 0;
     return ((1 - (sp / mrp)) * 100).round();
   }
 }

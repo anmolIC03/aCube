@@ -1,9 +1,12 @@
 import 'package:acu/screens/components/cart_components/cart_card.dart';
 import 'package:acu/screens/components/cart_components/cart_controller.dart';
 import 'package:acu/screens/components/cart_components/cart_item.dart';
+import 'package:acu/screens/components/cart_components/guestCartController.dart';
+import 'package:acu/screens/unified_checkout.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:acu/screens/checkOutCart.dart';
+import 'package:get_storage/get_storage.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -14,24 +17,33 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   int itemCount = 0;
+  late final CartController cartController;
+  late final GuestCartController guestCartController;
+  final String? userId = GetStorage().read("userId");
 
   @override
   void initState() {
     super.initState();
+    cartController = Get.put(CartController());
+    guestCartController = Get.put(GuestCartController());
+
+    if (userId != null) {
+      cartController.fetchCart();
+    }
+
     updateItemCount();
-    Get.find<CartController>().fetchCart();
   }
 
   void updateItemCount() {
     setState(() {
-      itemCount = Get.find<CartController>().itemCount;
+      itemCount = userId == null
+          ? guestCartController.itemCount
+          : cartController.itemCount;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final CartController cartController = Get.find<CartController>();
-
     return Scaffold(
       backgroundColor: Colors.grey.shade300,
       appBar: AppBar(
@@ -50,7 +62,11 @@ class _CartPageState extends State<CartPage> {
         children: [
           Expanded(
             child: Obx(() {
-              return cartController.cartItems.isEmpty
+              final items = userId == null
+                  ? guestCartController.cartItems
+                  : cartController.cartItems;
+
+              return items.isEmpty
                   ? Center(
                       child: Text(
                         'Your cart is empty!',
@@ -59,12 +75,15 @@ class _CartPageState extends State<CartPage> {
                       ),
                     )
                   : ListView.builder(
-                      itemCount: cartController.cartItems.length,
+                      itemCount: items.length,
                       itemBuilder: (context, index) {
-                        final item = cartController.cartItems[index];
+                        final item = items[index];
+
                         return CartCard(
                           item: item,
-                          cartController: cartController,
+                          cartController: userId == null
+                              ? guestCartController
+                              : cartController,
                           updateItemCount: updateItemCount,
                         );
                       },
@@ -72,10 +91,14 @@ class _CartPageState extends State<CartPage> {
             }),
           ),
           Obx(() {
-            double totalAmount = cartController.cartItems
-                .fold(0, (sum, item) => sum + (item.price * item.quantity));
+            final items = userId == null
+                ? guestCartController.cartItems
+                : cartController.cartItems;
 
-            return cartController.cartItems.isEmpty
+            double totalAmount = items.fold(
+                0, (sum, item) => sum + (item.price * item.quantity));
+
+            return items.isEmpty
                 ? SizedBox.shrink()
                 : Container(
                     padding: EdgeInsets.symmetric(vertical: 25, horizontal: 16),
@@ -103,17 +126,28 @@ class _CartPageState extends State<CartPage> {
                                   fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                             Text(
-                              '${cartController.itemCount} items',
+                              '${items.length} items',
                               style:
                                   TextStyle(fontSize: 14, color: Colors.grey),
                             ),
                           ],
                         ),
                         ElevatedButton(
-                          onPressed: () {
-                            List<CartItem> cartItems =
-                                cartController.cartItems.toList();
-                            Get.to(() => CheckOutCart(cartItems: cartItems));
+                          onPressed: () async {
+                            print(userId);
+
+                            if (userId != null) {
+                              // Refresh cart to make sure latest items are loaded
+                              await cartController.fetchCart();
+                            }
+                            final itemsToSend = userId == null
+                                ? guestCartController.cartItems.toList()
+                                : cartController.cartItems.toList();
+
+                            Get.to(() => UnifiedCheckoutScreen(
+                                  isSingleProduct: false,
+                                  cartItems: itemsToSend,
+                                ));
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color.fromRGBO(185, 28, 28, 1.0),
@@ -127,7 +161,7 @@ class _CartPageState extends State<CartPage> {
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold),
                           ),
-                        ),
+                        )
                       ],
                     ),
                   );

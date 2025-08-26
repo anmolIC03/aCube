@@ -1,10 +1,13 @@
-import 'package:acu/screens/components/cart_components/cart_controller.dart';
-import 'package:acu/screens/components/cart_components/cart_item.dart';
 import 'package:flutter/material.dart';
+import 'package:acu/screens/components/cart_components/cart_item.dart';
+import 'package:acu/screens/components/cart_components/cart_controller.dart';
+import 'package:acu/screens/components/cart_components/guestCartController.dart';
+import 'package:get_storage/get_storage.dart';
 
 class CartCard extends StatelessWidget {
   final CartItem item;
-  final CartController cartController;
+  final dynamic
+      cartController; // <-- allows CartController or GuestCartController
   final VoidCallback updateItemCount;
 
   const CartCard({
@@ -16,6 +19,8 @@ class CartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? userId = GetStorage().read("userId");
+
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: Container(
@@ -29,10 +34,20 @@ class CartCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
-                  item.images.first,
+                  item.images.isNotEmpty && item.images.first.isNotEmpty
+                      ? item.images.first
+                      : 'https://via.placeholder.com/150', // fallback URL
                   width: 150,
                   height: double.infinity,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 150,
+                      color: Colors.grey[300],
+                      child: Icon(Icons.broken_image,
+                          size: 40, color: Colors.grey[700]),
+                    );
+                  },
                 ),
               ),
             ),
@@ -67,10 +82,18 @@ class CartCard extends StatelessWidget {
                           icon: Icon(Icons.remove_circle),
                           onPressed: () async {
                             if (item.quantity > 1) {
-                              await cartController.updateQuantity(
-                                  item.productId, item.quantity - 1);
+                              if (userId == null) {
+                                cartController.decrement(item.productId);
+                              } else {
+                                await cartController.updateQuantity(
+                                    item.productId, item.quantity - 1);
+                              }
                             } else {
-                              await cartController.removeItem(item.productId);
+                              if (userId == null) {
+                                cartController.removeFromCart(item.productId);
+                              } else {
+                                await cartController.removeItem(item.productId);
+                              }
                             }
                             updateItemCount();
                           },
@@ -85,9 +108,13 @@ class CartCard extends StatelessWidget {
                         IconButton(
                           icon: Icon(Icons.add_circle),
                           onPressed: () async {
-                            await cartController.updateQuantity(
-                                item.productId, item.quantity + 1);
-                            updateItemCount(); // ✅ Refresh UI
+                            if (userId == null) {
+                              cartController.increment(item.productId);
+                            } else {
+                              await cartController.updateQuantity(
+                                  item.productId, item.quantity + 1);
+                            }
+                            updateItemCount();
                           },
                         ),
                       ],

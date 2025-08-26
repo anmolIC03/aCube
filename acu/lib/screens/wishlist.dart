@@ -1,5 +1,4 @@
 import 'package:acu/screens/components/cart_components/product_components/prodList.dart';
-import 'package:acu/screens/components/products/rating_list.dart';
 import 'package:acu/screens/components/wishlist_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
