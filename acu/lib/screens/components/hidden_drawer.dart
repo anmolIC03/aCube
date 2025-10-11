@@ -103,10 +103,8 @@ class _HiddenDrawerState extends State<HiddenDrawer> {
       textCancel: "No",
       confirmTextColor: Colors.white,
       onConfirm: () {
-        // 1) Close dialog immediately
         Get.back();
 
-        // 2) Clear stored user data
         storage.erase();
 
         Future.delayed(const Duration(milliseconds: 100), () {
