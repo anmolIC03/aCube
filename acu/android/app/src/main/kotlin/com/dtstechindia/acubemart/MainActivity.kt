@@ -1,4 +1,4 @@
-package com.example.acu
+package com.dtstechindia.acubemart
 
 import io.flutter.embedding.android.FlutterActivity
 
